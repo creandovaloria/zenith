@@ -207,7 +207,7 @@ export default function Dashboard() {
 
                   <div className="flex items-start gap-6">
                     <div className={cn("p-4 rounded-2xl bg-white/5 border border-white/10 shadow-2xl", activeRole.color)}>
-                      {React.cloneElement(activeRole.icon as React.ReactElement, { className: "w-8 h-8" })}
+                      {React.cloneElement(activeRole.icon as React.ReactElement<{ className?: string }>, { className: "w-8 h-8" })}
                     </div>
                     <div>
                       <h2 className="text-4xl lg:text-5xl font-bold tracking-tight mb-2 text-white">{activeRole.name}</h2>
@@ -426,7 +426,7 @@ function NavItem({ icon, label, active = false }: { icon: React.ReactNode; label
       )}
     >
       <div className={cn("transition-transform group-hover:scale-110", active ? "" : "opacity-70")}>
-        {React.cloneElement(icon as React.ReactElement, { size: 18 })}
+        {React.cloneElement(icon as React.ReactElement<{ size?: number; className?: string }>, { size: 18 })}
       </div>
       <span>{label}</span>
       {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white opacity-50"></div>}
