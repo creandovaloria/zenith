@@ -22,7 +22,10 @@ import {
   Dumbbell,
   CheckSquare,
   Clock,
-  ArrowRight
+  ArrowRight,
+  Sunrise,
+  Sunset,
+  Coffee
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +33,7 @@ import { cn } from "@/lib/utils";
 type Role = {
   id: string;
   name: string;
+  focus: string; // e.g. "Profundidad Extrema"
   icon: React.ReactNode;
   color: string;
   hex: string;
@@ -37,70 +41,77 @@ type Role = {
   description: string;
 };
 
-// --- Data: Roles & Rules ---
+// --- Data: Roles & Rules (Updated with Optimized Agenda) ---
 const ROLES: Record<string, Role> = {
   Monday: {
     id: "architect",
     name: "Arquitecto",
+    focus: "Profundidad Extrema",
     icon: <Brain className="w-6 h-6" />,
     color: "text-amber-500",
     hex: "#F59E0B",
     question: "¿Qué sistemas diseñaré hoy para el futuro?",
-    description: "Diseño de sistemas, planeación táctica y estructuración.",
+    description: "MVP activo, trabajo duro analítico y de ejecución.",
   },
   Tuesday: {
     id: "sculptor",
     name: "Escultor",
+    focus: "Ejecución Acelerada",
     icon: <Hammer className="w-6 h-6" />,
     color: "text-blue-500",
     hex: "#3B82F6",
-    question: "¿Qué obra mestra ejecutaré hoy con excelencia?",
-    description: "Ejecución profunda, creación de valor tangible.",
+    question: "¿Qué obra maestra ejecutaré hoy con excelencia?",
+    description: "Integración, performance y creatividad técnica.",
   },
   Wednesday: {
     id: "integrator",
     name: "Integrador",
+    focus: "Sinergias & Watercooler",
     icon: <Network className="w-6 h-6" />,
     color: "text-emerald-500",
     hex: "#10B981",
     question: "¿Cómo se conecta esto con aquello?",
-    description: "Conexiones, reuniones estratégicas y sinergias.",
+    description: "Creación profunda matutina + creatividad abierta vespertina.",
   },
   Thursday: {
     id: "analyst",
     name: "Analista",
+    focus: "Admin & Métricas",
     icon: <BarChart3 className="w-6 h-6" />,
     color: "text-red-500",
     hex: "#EF4444",
     question: "¿Qué dicen realmente los datos?",
-    description: "Revisión de métricas, KPIs y decisiones basadas en datos.",
+    description: "Finanzas, correos, dashboards y decisiones de portafolio.",
   },
   Friday: {
     id: "philosopher",
     name: "Filósofo",
+    focus: "Revisión & Planificación",
     icon: <BookOpen className="w-6 h-6" />,
     color: "text-violet-500",
     hex: "#8B5CF6",
     question: "¿Por qué esto importa realmente?",
-    description: "Reflexión profunda, escritura y cuestionamiento.",
+    description: "Weekly Review GTD, Post-mortem y Planificación.",
   },
   Saturday: {
     id: "explorer",
     name: "Explorador",
+    focus: "Descanso Activo",
     icon: <Compass className="w-6 h-6" />,
     color: "text-cyan-500",
     hex: "#06B6D4",
     question: "¿Qué territorio nuevo descubriré hoy?",
-    description: "Aprendizaje, curiosidad y salir de la zona de confort.",
+    description: "Consumo dirigido, naturaleza y hobbies.",
   },
   Sunday: {
     id: "guardian",
     name: "Guardián",
+    focus: "Reflexión & Preparación",
     icon: <Shield className="w-6 h-6" />,
     color: "text-gray-500",
     hex: "#6B7280",
     question: "¿Qué necesito proteger para mantener el equilibrio?",
-    description: "Integración, recuperación y protección del sistema.",
+    description: "Journaling, objetivos mensuales y logística.",
   },
 };
 
@@ -111,11 +122,11 @@ export default function Dashboard() {
   useEffect(() => {
     const now = new Date();
     setCurrentDate(now);
-    const dayNameEn = format(now, "EEEE"); // "Monday", "Tuesday"...
+    const dayNameEn = format(now, "EEEE");
     setActiveRole(ROLES[dayNameEn] || ROLES["Monday"]);
   }, []);
 
-  if (!currentDate || !activeRole) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Inicializando Zenith OS...</div>;
+  if (!currentDate || !activeRole) return <div className="min-h-screen flex items-center justify-center text-muted-foreground bg-black">Inicializando Zenith OS...</div>;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex font-sans selection:bg-primary/30">
@@ -152,24 +163,25 @@ export default function Dashboard() {
           <div>
             <h1 className="font-semibold text-lg flex items-center gap-2">
               Mission Control
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-muted text-muted-foreground border border-border">V1.0</span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-muted text-muted-foreground border border-border">V1.2</span>
             </h1>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground flex items-center gap-2">
               {format(currentDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
+              <span className="w-1 h-1 rounded-full bg-muted-foreground"></span>
+              <span className="uppercase tracking-wider font-medium text-primary">{activeRole.focus}</span>
             </p>
           </div>
 
           <div className="flex items-center gap-6">
-            {/* Quick Stats in Header */}
             <div className="hidden md:flex items-center gap-4 text-xs font-medium text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                Systems Online
+              {/* Simulated Biometrics from Apple Watch */}
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10" title="Datos sincronizados de Apple Health">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                <span className="text-foreground">HRV: 92ms</span>
+                <span className="text-muted-foreground/50">|</span>
+                <span className="text-foreground">Sleep: 7h 45m</span>
               </div>
-              <div className="h-4 w-px bg-border"></div>
-              <span>MVP: FocusFlow</span>
             </div>
-
             <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-zinc-800 to-zinc-700 border border-white/10 ring-2 ring-transparent hover:ring-primary/50 transition-all cursor-pointer"></div>
           </div>
         </header>
@@ -199,16 +211,19 @@ export default function Dashboard() {
                     </div>
                     <div>
                       <h2 className="text-4xl lg:text-5xl font-bold tracking-tight mb-2 text-white">{activeRole.name}</h2>
-                      <p className="text-lg text-muted-foreground font-light">{activeRole.description}</p>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-lg font-medium text-white/90">{activeRole.focus}</span>
+                        <p className="text-sm text-muted-foreground font-light">{activeRole.description}</p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="mt-8 p-6 rounded-2xl bg-white/5 border border-white/5 relative overflow-hidden">
+                  <div className="mt-8 p-6 rounded-2xl bg-white/5 border border-white/5 relative overflow-hidden group/quote hover:bg-white/10 transition-colors cursor-default">
                     <div className="absolute top-0 left-0 w-1 h-full bg-primary/50"></div>
                     <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider mb-2 flex items-center gap-2">
                       <Compass className="w-4 h-4" /> Pregunta Guía
                     </p>
-                    <p className="text-2xl font-light italic text-white/90 leading-relaxed">"{activeRole.question}"</p>
+                    <p className="text-xl md:text-2xl font-light italic text-white/90 leading-relaxed">"{activeRole.question}"</p>
                   </div>
                 </div>
 
@@ -219,9 +234,19 @@ export default function Dashboard() {
                   </h3>
 
                   <div className="space-y-5">
-                    <SliderInput label="Energía" icon={<Zap className="w-4 h-4 text-yellow-500" />} defaultValue={8} />
-                    <SliderInput label="Enfoque" icon={<Focus className="w-4 h-4 text-blue-500" />} defaultValue={7} />
-                    <SliderInput label="Motivación" icon={<Flame className="w-4 h-4 text-red-500" />} defaultValue={9} />
+                    <SliderInput label="Energía Biológica" icon={<Zap className="w-4 h-4 text-yellow-500" />} defaultValue={9} />
+                    <SliderInput label="Enfoque Mental" icon={<Focus className="w-4 h-4 text-blue-500" />} defaultValue={8} />
+                    <SliderInput label="Motivación Emocional" icon={<Flame className="w-4 h-4 text-red-500" />} defaultValue={9} />
+                  </div>
+
+                  <div className="pt-4 border-t border-white/5">
+                    <div className="flex justify-between items-center text-xs text-muted-foreground mb-2">
+                      <span>Readiness Score</span>
+                      <span className="text-green-400 font-bold">OPTIMAL</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-full bg-green-500 w-[95%] rounded-full shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
+                    </div>
                   </div>
                 </div>
 
@@ -231,8 +256,8 @@ export default function Dashboard() {
 
           <div className="grid lg:grid-cols-3 gap-8">
 
-            {/* SECTION 2: CRITICAL OBJECTIVES & AGENDA */}
-            <div className="lg:col-span-2 space-y-6">
+            {/* SECTION 2: CRITICAL OBJECTIVES & CIRCADIAN AGENDA */}
+            <div className="lg:col-span-2 space-y-8">
 
               {/* 3 Critical Objectives */}
               <div className="p-6 rounded-2xl border border-border bg-card shadow-sm">
@@ -241,46 +266,91 @@ export default function Dashboard() {
                     <Target className="w-5 h-5 text-red-500" />
                     3 Objetivos Críticos
                   </h3>
-                  <span className="text-xs text-muted-foreground font-mono">1/3 Completado</span>
+                  <span className="text-xs text-muted-foreground font-mono bg-muted px-2 py-1 rounded">Prioridad Absoluta</span>
                 </div>
 
                 <div className="space-y-3">
-                  <ObjectiveItem text="Definir arquitectura MVP FocusFlow" completed={true} />
-                  <ObjectiveItem text="Configurar automatización Coda (Daily Logs)" completed={false} />
-                  <ObjectiveItem text="Reunión estratégica con equipo de diseño" completed={false} />
+                  <ObjectiveItem text="Bloque 1: Desarrollo MVP (Tarea Compleja)" completed={false} />
+                  <ObjectiveItem text="Bloque 2: Testing & QA (Sin context switching)" completed={false} />
+                  <ObjectiveItem text="Validación: 2 Entrevistas de usuario" completed={false} />
                 </div>
               </div>
 
-              {/* Agenda (Simulated from Calendar) */}
-              <div className="p-6 rounded-2xl border border-border bg-card shadow-sm">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="font-semibold text-lg flex items-center gap-2">
-                    <CalendarIcon className="w-5 h-5 text-blue-500" />
-                    Agenda del Día
-                  </h3>
-                  <button className="text-xs text-primary hover:underline">Sincronizar</button>
-                </div>
+              {/* Circadian Agenda - Optimized for Rhythms */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2 px-1">
+                  <Clock className="w-5 h-5 text-blue-500" />
+                  Agenda Circadiana
+                </h3>
 
-                <div className="space-y-4 relative">
-                  {/* Timeline line */}
-                  <div className="absolute left-[5.5rem] top-2 bottom-2 w-px bg-border"></div>
+                {/* Morning Ritual Phase */}
+                <PhaseCard
+                  title="Ritual Matutino (Cimiento)"
+                  time="05:00 - 07:50"
+                  icon={<Sunrise className="w-5 h-5 text-orange-400" />}
+                  intent="Preparación Física, Mental y Espiritual"
+                  items={[
+                    "5:00 - Despertar + Agua con Limón",
+                    "5:15 - Meditación Vipassana (15m)",
+                    "5:45 - HIIT + Caminata con Liz",
+                    "7:40 - Ducha Fría Tim Ferriss"
+                  ]}
+                  isActive={false}
+                />
 
-                  <AgendaItem time="06:00" title="Rutina Matutina" duration="1h" type="ritual" />
-                  <AgendaItem time="08:00" title="Bloque de Creación: Mission Control UI" duration="2h" type="work" />
-                  <AgendaItem time="10:20" title="Revisión de Métricas" duration="1h" type="work" />
-                  <AgendaItem time="13:30" title="Almuerzo & Desconexión" duration="1h" type="personal" />
-                  <AgendaItem time="16:00" title="Llamada de Validación MVP" duration="30m" type="meeting" />
-                </div>
+                {/* Deep Work Phase (Peak) */}
+                <PhaseCard
+                  title="Bloque de Creación Profunda (PICO)"
+                  time="07:50 - 12:50"
+                  icon={<Brain className="w-5 h-5 text-indigo-400" />}
+                  intent="Máxima Alerta Analítica - Modo Avión"
+                  items={[
+                    "7:50 - Daily Standup Personal",
+                    "8:05 - Bloque #1: Desarrollo MVP (90m)",
+                    "9:45 - Break Estratégico (Caminata/Sol)",
+                    "10:00 - Bloque #2: Desarrollo MVP (110m)"
+                  ]}
+                  variant="peak"
+                  isActive={true} // Putting this active for demo purposes
+                />
+
+                {/* Admin/Recovery Phase (Trough/Recovery) */}
+                <PhaseCard
+                  title="Almuerzo & Validación (VALLE/RECUPERACIÓN)"
+                  time="12:50 - 17:00"
+                  icon={<Coffee className="w-5 h-5 text-emerald-400" />}
+                  intent="Nutrición, Siesta y Tareas Sociales"
+                  items={[
+                    "12:50 - Almuerzo Consciente + 20m Siesta",
+                    "14:00 - Validación & Networking",
+                    "15:00 - Aprendizaje Dirigido",
+                    "16:00 - Entrevistas Usuarios"
+                  ]}
+                  isActive={false}
+                />
+
+                {/* Evening Ritual Phase */}
+                <PhaseCard
+                  title="Cierre & Vida (Desconexión)"
+                  time="17:00 - 22:00"
+                  icon={<Sunset className="w-5 h-5 text-slate-400" />}
+                  intent="Revisión, Familia y Descanso"
+                  items={[
+                    "17:00 - Revisión Diaria & Planificación Mañana",
+                    "18:00 - Vida: Familia, Hobbies (Modo Off)",
+                    "22:00 - Dormir (7-8h)"
+                  ]}
+                  isActive={false}
+                />
               </div>
-
             </div>
 
-            {/* SECTION 3: ANTIFRAGILE & FLOW */}
+            {/* SECTION 3: ANTIFRAGILE & TRACKING */}
             <div className="space-y-6">
 
               {/* Antifragile Challenge */}
               <div className="p-6 rounded-2xl border border-border bg-gradient-to-br from-card to-card/50 shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-20 bg-red-500/5 blur-3xl rounded-full pointer-events-none"></div>
+                <div className="absolute top-0 right-0 p-20 bg-orange-500/5 blur-3xl rounded-full pointer-events-none"></div>
                 <h3 className="font-semibold text-lg flex items-center gap-2 mb-4 relative z-10">
                   <Dumbbell className="w-5 h-5 text-orange-500" />
                   Desafío Antifrágil
@@ -289,7 +359,7 @@ export default function Dashboard() {
                 <div className="space-y-4 relative z-10">
                   <div className="p-4 rounded-xl bg-muted/50 border border-border">
                     <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">Tipo: Incomodidad Social</span>
-                    <p className="font-medium">"Contactar a un potencial cliente por LinkedIn sin dudar."</p>
+                    <p className="font-medium text-sm">"Contactar a un potencial cliente por LinkedIn sin dudar."</p>
                   </div>
 
                   <div>
@@ -304,7 +374,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Flow Tracking Table Mockup */}
+              {/* Flow Tracking Table */}
               <div className="p-6 rounded-2xl border border-border bg-card shadow-sm">
                 <h3 className="font-semibold text-lg flex items-center gap-2 mb-4">
                   <ArrowRight className="w-5 h-5 text-indigo-500" />
@@ -312,10 +382,25 @@ export default function Dashboard() {
                 </h3>
 
                 <div className="space-y-3">
-                  <FlowBlock id={1} time="08:00 - 10:00" score={9} />
-                  <FlowBlock id={2} time="10:20 - 12:00" score={null} />
-                  <FlowBlock id={3} time="13:30 - 16:00" score={null} />
-                  <FlowBlock id={4} time="16:00 - 18:00" score={null} />
+                  <FlowBlock id={1} label="Bloque 1 (MVP)" time="08:05" score={null} />
+                  <FlowBlock id={2} label="Bloque 2 (MVP)" time="10:00" score={null} />
+                  <FlowBlock id={3} label="Validación" time="14:00" score={null} />
+                  <FlowBlock id={4} label="Aprendizaje" time="15:00" score={null} />
+                </div>
+              </div>
+
+              {/* Metrics Mini-Dashboard */}
+              <div className="p-6 rounded-2xl border border-border bg-card shadow-sm space-y-4">
+                <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Métricas en Tiempo Real</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-muted/30 rounded-lg border border-border/50">
+                    <div className="text-xs text-muted-foreground mb-1">MVP Cycle Time</div>
+                    <div className="font-mono text-lg font-bold">12d</div>
+                  </div>
+                  <div className="p-3 bg-muted/30 rounded-lg border border-border/50">
+                    <div className="text-xs text-muted-foreground mb-1">Deep Work (Semana)</div>
+                    <div className="font-mono text-lg font-bold">18h</div>
+                  </div>
                 </div>
               </div>
 
@@ -361,7 +446,6 @@ function SliderInput({ label, icon, defaultValue }: { label: string; icon: React
           className="h-full bg-gradient-to-r from-primary/50 to-primary rounded-full relative"
           style={{ width: `${defaultValue * 10}%` }}
         ></div>
-        {/* Hover effect mock */}
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-white/5 transition-opacity"></div>
       </div>
     </div>
@@ -382,46 +466,64 @@ function ObjectiveItem({ text, completed }: { text: string; completed: boolean }
   );
 }
 
-function AgendaItem({ time, title, duration, type }: { time: string; title: string; duration: string; type: "ritual" | "work" | "meeting" | "personal" }) {
-
-  const typeStyles = {
-    ritual: "border-l-indigo-500 bg-indigo-500/5",
-    work: "border-l-emerald-500 bg-emerald-500/5",
-    meeting: "border-l-amber-500 bg-amber-500/5",
-    personal: "border-l-rose-500 bg-rose-500/5",
-  };
-
+function PhaseCard({ title, time, icon, intent, items, variant = "neural", isActive = false }: { title: string; time: string; icon: React.ReactNode; intent: string; items: string[]; variant?: "neural" | "peak"; isActive: boolean }) {
   return (
-    <div className="flex gap-6 group">
-      <div className="w-16 shrink-0 text-right flex flex-col items-end pt-1">
-        <span className="font-mono font-bold text-sm block">{time}</span>
-        <span className="text-[10px] text-muted-foreground">{duration}</span>
-      </div>
+    <div className={cn(
+      "rounded-2xl border transition-all duration-300 relative overflow-hidden",
+      isActive
+        ? "bg-card border-primary/50 ring-1 ring-primary/20 shadow-lg"
+        : "bg-card/50 border-border hover:bg-card hover:border-border/80 opacity-70 hover:opacity-100"
+    )}>
+      {isActive && <div className="absolute top-0 left-0 w-1 h-full bg-primary"></div>}
 
-      <div className={cn(
-        "flex-1 p-3 rounded-r-lg border-l-2 text-sm transition-all hover:bg-muted/50",
-        typeStyles[type]
-      )}>
-        <p className="font-medium">{title}</p>
+      <div className="p-5">
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex items-center gap-3">
+            <div className={cn("p-2 rounded-lg bg-muted", isActive && "bg-primary/10 text-primary")}>
+              {icon}
+            </div>
+            <div>
+              <h4 className={cn("font-semibold text-sm", isActive && "text-primary")}>{title}</h4>
+              <span className="text-xs font-mono text-muted-foreground">{time}</span>
+            </div>
+          </div>
+          {isActive && <span className="text-[10px] uppercase font-bold tracking-wider bg-primary/10 text-primary px-2 py-1 rounded-full animate-pulse">En Curso</span>}
+        </div>
+
+        <p className="text-xs text-muted-foreground italic mb-4 border-l-2 border-border pl-2">"{intent}"</p>
+
+        <ul className="space-y-2">
+          {items.map((item, idx) => (
+            <li key={idx} className="text-sm flex items-start gap-2 text-foreground/80">
+              <span className="w-1.5 h-1.5 rounded-full bg-border mt-1.5 shrink-0"></span>
+              {item}
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );
 }
 
-function FlowBlock({ id, time, score }: { id: number; time: string; score: number | null }) {
+function FlowBlock({ id, label, time, score }: { id: number; label: string; time: string; score: number | null }) {
   return (
     <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-background/50 hover:bg-muted/50 transition-colors">
       <div className="flex items-center gap-3">
         <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
           {id}
         </div>
-        <span className="text-sm font-mono text-muted-foreground">{time}</span>
+        <div className="flex flex-col">
+          <span className="text-sm font-medium">{label}</span>
+          <span className="text-xs font-mono text-muted-foreground">{time}</span>
+        </div>
       </div>
 
       {score ? (
         <span className="font-bold text-green-500">{score}/10</span>
       ) : (
-        <span className="text-xs text-muted-foreground italic">Pendiente</span>
+        <button className="text-xs px-2 py-1 bg-muted rounded border border-white/5 hover:bg-white/10 transition-colors">
+          Registrar
+        </button>
       )}
     </div>
   );
