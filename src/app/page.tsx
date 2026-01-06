@@ -25,7 +25,8 @@ import {
   ArrowRight,
   Sunrise,
   Sunset,
-  Coffee
+  Coffee,
+  CloudSun
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +34,7 @@ import { cn } from "@/lib/utils";
 type Role = {
   id: string;
   name: string;
-  focus: string; // e.g. "Profundidad Extrema"
+  focus: string;
   icon: React.ReactNode;
   color: string;
   hex: string;
@@ -41,7 +42,7 @@ type Role = {
   description: string;
 };
 
-// --- Data: Roles & Rules (Updated with Optimized Agenda) ---
+// --- Data: Roles & Rules ---
 const ROLES: Record<string, Role> = {
   Monday: {
     id: "architect",
@@ -111,19 +112,347 @@ const ROLES: Record<string, Role> = {
     color: "text-gray-500",
     hex: "#6B7280",
     question: "¿Qué necesito proteger para mantener el equilibrio?",
-    description: "Journaling, objetivos mensuales y logística.",
+    description: "Reflexión estratégica, journaling y logística.",
   },
+};
+
+// --- Helper: Get Agenda by Day ---
+const getAgendaForDay = (dayName: string) => {
+  switch (dayName) {
+    case "Monday":
+      return [
+        {
+          title: "Ritual Matutino (Cimiento)",
+          time: "05:00 - 07:50",
+          icon: <Sunrise className="w-5 h-5 text-orange-400" />,
+          intent: "Preparación Física, Mental y Espiritual",
+          items: [
+            "5:00 - Despertar + Agua con Limón",
+            "5:15 - Meditación Vipassana (15m)",
+            "5:45 - HIIT (20m) + Caminata con Liz (30m)",
+            "7:40 - Ducha Fría Tim Ferriss"
+          ],
+          variant: "neural"
+        },
+        {
+          title: "Bloque de Creación Profunda #1 (PICO)",
+          time: "07:50 - 12:50",
+          icon: <Brain className="w-5 h-5 text-indigo-400" />,
+          intent: "Máxima Alerta Analítica - Modo Avión",
+          items: [
+            "7:50 - Daily Standup Personal",
+            "8:05 - Bloque #1: Desarrollo MVP (120m)",
+            "10:00 - Bloque #2: Desarrollo MVP (110m)",
+            "12:00 - Captura y Procesamiento (GTD)"
+          ],
+          variant: "peak",
+          isActive: true
+        },
+        {
+          title: "Almuerzo & Regeneración (VALLE)",
+          time: "12:50 - 14:00",
+          icon: <Coffee className="w-5 h-5 text-emerald-400" />,
+          intent: "Nutrición, Siesta y Tareas Sociales",
+          items: [
+            "12:50 - Almuerzo Consciente",
+            "13:25 - Lectura no relacionada",
+            "13:40 - Siesta Estratégica (20m)"
+          ],
+          variant: "neural"
+        },
+        {
+          title: "Validación & Comunicación",
+          time: "14:00 - 17:00",
+          icon: <Network className="w-5 h-5 text-blue-400" />,
+          intent: "Conexión Externa y Aprendizaje",
+          items: [
+            "14:00 - Comunicación Estratégica (Batch)",
+            "15:00 - Aprendizaje Dirigido",
+            "16:00 - 2 Entrevistas de Validación"
+          ],
+          variant: "neural"
+        },
+        {
+          title: "Cierre & Vida",
+          time: "17:00 - 22:00",
+          icon: <Sunset className="w-5 h-5 text-slate-400" />,
+          intent: "Revisión, Familia y Descanso",
+          items: [
+            "17:00 - Revisión Diaria & Planificación Mañana",
+            "18:00 - Vida: Deporte, Familia, Hobbies",
+            "22:00 - Dormir"
+          ],
+          variant: "neural"
+        }
+      ];
+    case "Tuesday":
+      return [
+        {
+          title: "Ritual Matutino (Cimiento)",
+          time: "05:00 - 07:50",
+          icon: <Sunrise className="w-5 h-5 text-orange-400" />,
+          intent: "Preparación Física, Mental y Espiritual",
+          items: [
+            "5:00 - Despertar + Agua con Limón",
+            "5:15 - Meditación Vipassana (15m)",
+            "5:45 - HIIT (20m) + Caminata con Liz (30m)",
+            "7:40 - Ducha Fría Tim Ferriss"
+          ],
+          variant: "neural"
+        },
+        {
+          title: "Bloque de Creación #2 (Ejecución)",
+          time: "07:50 - 12:50",
+          icon: <Hammer className="w-5 h-5 text-blue-400" />,
+          intent: "Desarrollo y Testing Acelerado",
+          items: [
+            "7:50 - Daily Standup",
+            "8:05 - Bloque #1: Desarrollo MVP (120m)",
+            "10:00 - Testing & QA MVP (110m)",
+            "12:00 - Captura y Procesamiento (GTD)"
+          ],
+          variant: "peak",
+          isActive: true
+        },
+        {
+          title: "Almuerzo & Regeneración",
+          time: "12:50 - 14:00",
+          icon: <Coffee className="w-5 h-5 text-emerald-400" />,
+          intent: "Nutrición y Siesta",
+          items: ["Almuerzo + Lectura + Siesta 20m"],
+          variant: "neural"
+        },
+        {
+          title: "Validación & Networking",
+          time: "14:00 - 17:00",
+          icon: <Network className="w-5 h-5 text-purple-400" />,
+          intent: "Análisis Competencia y Conexiones",
+          items: [
+            "14:00 - Análisis Competencia Profundo",
+            "15:00 - Networking Estratégico",
+            "16:00 - Revisión Métricas MVP Anterior"
+          ],
+          variant: "neural"
+        },
+        {
+          title: "Cierre & Vida",
+          time: "17:00 - 22:00",
+          icon: <Sunset className="w-5 h-5 text-slate-400" />,
+          intent: "Desconexión Total",
+          items: ["17:00 - Revisión", "18:00 - Vida", "22:00 - Dormir"],
+          variant: "neural"
+        }
+      ];
+    case "Wednesday":
+      return [
+        {
+          title: "Ritual Matutino (Cimiento)",
+          time: "05:00 - 07:50",
+          icon: <Sunrise className="w-5 h-5 text-orange-400" />,
+          intent: "Preparación Física, Mental y Espiritual",
+          items: [
+            "5:00 - Despertar", "5:15 - Meditación", "5:45 - HIIT + Caminata", "7:40 - Ducha Fría"
+          ],
+          variant: "neural"
+        },
+        {
+          title: "Bloque de Creación #3 (Sinergias)",
+          time: "07:50 - 12:50",
+          icon: <Network className="w-5 h-5 text-emerald-400" />,
+          intent: "Integraciones Técnicas y Cross-MVP",
+          items: [
+            "7:50 - Integraciones (APIs, DB)",
+            "10:00 - Optimización Performance",
+            "11:00 - Cross-MVP Integration"
+          ],
+          variant: "peak",
+          isActive: true
+        },
+        {
+          title: "Watercooler Day (Creatividad)",
+          time: "14:00 - 17:00",
+          icon: <CloudSun className="w-5 h-5 text-yellow-400" />,
+          intent: "Tiempo No Estructurado y Exploración",
+          items: [
+            "14:00 - Brainstorming Libre",
+            "15:00 - Office Hours / Reuniones Espontáneas",
+            "16:00 - Aprendizaje Cruzado"
+          ],
+          variant: "neural"
+        },
+        {
+          title: "Revisión Semanal Parcial & Cierre",
+          time: "17:00 - 22:00",
+          icon: <Sunset className="w-5 h-5 text-slate-400" />,
+          intent: "Ajuste de Rumbo",
+          items: ["17:00 - Revisión Parcial", "18:00 - Vida", "22:00 - Dormir"],
+          variant: "neural"
+        }
+      ];
+    case "Thursday":
+      return [
+        {
+          title: "Ritual Matutino Adaptado",
+          time: "05:00 - 07:50",
+          icon: <Sunrise className="w-5 h-5 text-orange-400" />,
+          intent: "Enfoque en Calma",
+          items: [
+            "5:00 - Despertar", "5:45 - Yoga (Ligero)", "6:35 - Caminata con Liz", "7:40 - Ducha Fría"
+          ],
+          variant: "neural"
+        },
+        {
+          title: "Bloque Admin & Métricas",
+          time: "07:50 - 12:50",
+          icon: <BarChart3 className="w-5 h-5 text-red-400" />,
+          intent: "Batch Processing y Análisis de Datos",
+          items: [
+            "7:50 - Revisión Dashboards",
+            "8:20 - Finanzas y Email Batch",
+            "10:50 - Deep Dive Métricas MVP Activo",
+            "11:50 - Revisión Portafolio Completo"
+          ],
+          variant: "peak",
+          isActive: true
+        },
+        {
+          title: "Aprendizaje Estratégico",
+          time: "14:00 - 17:00",
+          icon: <BookOpen className="w-5 h-5 text-violet-400" />,
+          intent: "Llenar Gaps de Habilidades",
+          items: [
+            "14:00 - Consumo Dirigido (Curso/Libro)",
+            "15:00 - Síntesis y Aplicación",
+            "16:00 - Preparación Viernes"
+          ],
+          variant: "neural"
+        },
+        {
+          title: "Cierre & Vida",
+          time: "17:00 - 22:00",
+          icon: <Sunset className="w-5 h-5 text-slate-400" />,
+          intent: "Desconexión",
+          items: ["17:00 - Libre", "18:00 - Vida", "22:00 - Dormir"],
+          variant: "neural"
+        }
+      ];
+    case "Friday":
+      return [
+        {
+          title: "Ritual Matutino Ligero",
+          time: "05:30 - 08:20",
+          icon: <Sunrise className="w-5 h-5 text-orange-400" />,
+          intent: "Preparación para Revisión Profunda",
+          items: [
+            "5:30 - Despertar", "5:45 - Meditación (30m)", "6:30 - HIIT (30m)", "8:15 - Ducha Fría"
+          ],
+          variant: "neural"
+        },
+        {
+          title: "Revisión Semanal & Post-Mortem",
+          time: "08:20 - 12:20",
+          icon: <CheckSquare className="w-5 h-5 text-violet-400" />,
+          intent: "GTD Weekly Review y Aprendizaje",
+          items: [
+            "8:20 - Weekly Review GTD (Recolectar, Procesar, Organizar)",
+            "10:20 - Post-Mortem Semanal MVPs"
+          ],
+          variant: "peak",
+          isActive: true
+        },
+        {
+          title: "Planificación Próxima Semana",
+          time: "13:30 - 15:30",
+          icon: <Compass className="w-5 h-5 text-blue-400" />,
+          intent: "Diseño del Futuro Inmediato",
+          items: [
+            "13:30 - Plan Detallado Semana Siguiente",
+            "14:20 - Preparación Próximo MVP"
+          ],
+          variant: "neural"
+        },
+        {
+          title: "Creatividad & Cierre Semanal",
+          time: "15:30 - 16:30",
+          icon: <Flame className="w-5 h-5 text-yellow-400" />,
+          intent: "Visualización y Celebración",
+          items: [
+            "15:30 - Visualización de Futuro (1 año)",
+            "16:00 - Lluvia de Ideas Libre"
+          ],
+          variant: "neural"
+        }
+      ];
+    case "Saturday":
+      return [
+        {
+          title: "Ritual Matutino Adaptado",
+          time: "05:30 - 08:20",
+          icon: <Sunrise className="w-5 h-5 text-orange-400" />,
+          intent: "Inicio Consciente del Fin de Semana",
+          items: ["5:30 - Despertar", "Mediatación (30m)", "HIIT", "Caminata con Liz"],
+          variant: "neural"
+        },
+        {
+          title: "Consumo Dirigido (Mañana)",
+          time: "08:20 - 12:20",
+          icon: <BookOpen className="w-5 h-5 text-cyan-400" />,
+          intent: "Input de Alta Calidad sin Presión",
+          items: ["Lectura no Laboral", "Documentales Inspiradores", "Podcasts"],
+          variant: "neural"
+        },
+        {
+          title: "Conexión & Naturaleza",
+          time: "14:00 - 18:00",
+          icon: <CloudSun className="w-5 h-5 text-green-400" />,
+          intent: "Recarga Biológica y Social",
+          items: ["Aire Libre", "Tiempo con Seres Queridos", "Hobbies"],
+          variant: "neural"
+        }
+      ];
+    case "Sunday":
+      return [
+        {
+          title: "Ritual Matutino Adaptado",
+          time: "05:30 - 08:20",
+          icon: <Sunrise className="w-5 h-5 text-orange-400" />,
+          intent: "Inicio Consciente",
+          items: ["5:30 - Despertar", "Meditación (30m)", "HIIT", "Caminata con Liz"],
+          variant: "neural"
+        },
+        {
+          title: "Reflexión Estratégica",
+          time: "09:00 - 12:00",
+          icon: <Shield className="w-5 h-5 text-gray-400" />,
+          intent: "Journaling y Logística",
+          items: ["Journaling Profundo", "Revisión Mensual", "Preparación Logística (Comidas)"],
+          variant: "neural"
+        },
+        {
+          title: "Preparación Mental",
+          time: "15:00 - 17:00",
+          icon: <Brain className="w-5 h-5 text-indigo-400" />,
+          intent: "Visualización Semana Entrante",
+          items: ["Visualización", "Checklist Inicio Semana", "Planchar/Preparar"],
+          variant: "neural"
+        }
+      ];
+    default:
+      return [];
+  }
 };
 
 export default function Dashboard() {
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [activeRole, setActiveRole] = useState<Role | null>(null);
+  const [dailyAgenda, setDailyAgenda] = useState<any[]>([]);
 
   useEffect(() => {
     const now = new Date();
     setCurrentDate(now);
     const dayNameEn = format(now, "EEEE");
     setActiveRole(ROLES[dayNameEn] || ROLES["Monday"]);
+    setDailyAgenda(getAgendaForDay(dayNameEn));
   }, []);
 
   if (!currentDate || !activeRole) return <div className="min-h-screen flex items-center justify-center text-muted-foreground bg-black">Inicializando Zenith OS...</div>;
@@ -163,7 +492,7 @@ export default function Dashboard() {
           <div>
             <h1 className="font-semibold text-lg flex items-center gap-2">
               Mission Control
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-muted text-muted-foreground border border-border">V1.2</span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-muted text-muted-foreground border border-border">V1.3</span>
             </h1>
             <p className="text-xs text-muted-foreground flex items-center gap-2">
               {format(currentDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
@@ -276,72 +605,25 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Circadian Agenda - Optimized for Rhythms */}
+              {/* Circadian Agenda - Auto-Generated based on Day */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg flex items-center gap-2 px-1">
                   <Clock className="w-5 h-5 text-blue-500" />
-                  Agenda Circadiana
+                  Agenda Circadiana ({format(currentDate, "EEEE")})
                 </h3>
 
-                {/* Morning Ritual Phase */}
-                <PhaseCard
-                  title="Ritual Matutino (Cimiento)"
-                  time="05:00 - 07:50"
-                  icon={<Sunrise className="w-5 h-5 text-orange-400" />}
-                  intent="Preparación Física, Mental y Espiritual"
-                  items={[
-                    "5:00 - Despertar + Agua con Limón",
-                    "5:15 - Meditación Vipassana (15m)",
-                    "5:45 - HIIT + Caminata con Liz",
-                    "7:40 - Ducha Fría Tim Ferriss"
-                  ]}
-                  isActive={false}
-                />
-
-                {/* Deep Work Phase (Peak) */}
-                <PhaseCard
-                  title="Bloque de Creación Profunda (PICO)"
-                  time="07:50 - 12:50"
-                  icon={<Brain className="w-5 h-5 text-indigo-400" />}
-                  intent="Máxima Alerta Analítica - Modo Avión"
-                  items={[
-                    "7:50 - Daily Standup Personal",
-                    "8:05 - Bloque #1: Desarrollo MVP (90m)",
-                    "9:45 - Break Estratégico (Caminata/Sol)",
-                    "10:00 - Bloque #2: Desarrollo MVP (110m)"
-                  ]}
-                  variant="peak"
-                  isActive={true} // Putting this active for demo purposes
-                />
-
-                {/* Admin/Recovery Phase (Trough/Recovery) */}
-                <PhaseCard
-                  title="Almuerzo & Validación (VALLE/RECUPERACIÓN)"
-                  time="12:50 - 17:00"
-                  icon={<Coffee className="w-5 h-5 text-emerald-400" />}
-                  intent="Nutrición, Siesta y Tareas Sociales"
-                  items={[
-                    "12:50 - Almuerzo Consciente + 20m Siesta",
-                    "14:00 - Validación & Networking",
-                    "15:00 - Aprendizaje Dirigido",
-                    "16:00 - Entrevistas Usuarios"
-                  ]}
-                  isActive={false}
-                />
-
-                {/* Evening Ritual Phase */}
-                <PhaseCard
-                  title="Cierre & Vida (Desconexión)"
-                  time="17:00 - 22:00"
-                  icon={<Sunset className="w-5 h-5 text-slate-400" />}
-                  intent="Revisión, Familia y Descanso"
-                  items={[
-                    "17:00 - Revisión Diaria & Planificación Mañana",
-                    "18:00 - Vida: Familia, Hobbies (Modo Off)",
-                    "22:00 - Dormir (7-8h)"
-                  ]}
-                  isActive={false}
-                />
+                {dailyAgenda.map((phase, idx) => (
+                  <PhaseCard
+                    key={idx}
+                    title={phase.title}
+                    time={phase.time}
+                    icon={phase.icon}
+                    intent={phase.intent}
+                    items={phase.items}
+                    variant={phase.variant}
+                    isActive={phase.isActive || false}
+                  />
+                ))}
               </div>
             </div>
 
@@ -480,7 +762,7 @@ function PhaseCard({ title, time, icon, intent, items, variant = "neural", isAct
         <div className="flex justify-between items-start mb-3">
           <div className="flex items-center gap-3">
             <div className={cn("p-2 rounded-lg bg-muted", isActive && "bg-primary/10 text-primary")}>
-              {icon}
+              {React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: isActive ? "w-5 h-5 text-primary" : "w-5 h-5" })}
             </div>
             <div>
               <h4 className={cn("font-semibold text-sm", isActive && "text-primary")}>{title}</h4>
