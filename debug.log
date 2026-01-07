@@ -1,0 +1,9 @@
+Fetching from: https://coda.io/apis/v1/docs/obyq0e-fOD/tables/Biometrics/rows?useColumnNames=true&limit=5
+--- API RESPONSE SAMPLE (Last Item) ---
+{
+  "Date": "",
+  "HRV": "",
+  "Sleep_Seconds": "",
+  "Sleep_Hours": 0
+}
+---------------------------------------
