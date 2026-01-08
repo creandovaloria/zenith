@@ -489,7 +489,11 @@ const NavItemMobile = ({ icon, label, active = false }: { icon: React.ReactNode;
 );
 
 export default async function Dashboard() {
-  const currentDate = new Date();
+  // Fix Timezone: Vercel server is UTC. We align to User Time (UTC-6).
+  // This ensures late-night work counts as the "current day" and not tomorrow.
+  const serverDate = new Date();
+  const currentDate = new Date(serverDate.getTime() - (6 * 60 * 60 * 1000));
+
   const dayNameEn = format(currentDate, "EEEE");
   const activeRole = ROLES[dayNameEn] || ROLES["Monday"];
   const dailyAgenda = getAgendaForDay(dayNameEn);
