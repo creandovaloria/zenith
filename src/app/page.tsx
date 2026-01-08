@@ -469,6 +469,25 @@ const getAgendaForDay = (dayName: string): Phase[] => {
   }
 };
 
+const NavItem = ({ icon, label, active = false }: { icon: React.ReactNode; label: string; active?: boolean }) => (
+  <div
+    className={cn(
+      "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer group",
+      active ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" : "text-muted-foreground hover:bg-white/5 hover:text-white"
+    )}
+  >
+    <div className={cn("transition-transform duration-200 group-hover:scale-110", active && "scale-110")}>{icon}</div>
+    <span className="font-medium text-sm lg:text-base hidden lg:block">{label}</span>
+  </div>
+);
+
+const NavItemMobile = ({ icon, label, active = false }: { icon: React.ReactNode; label: string; active?: boolean }) => (
+  <div className={cn("flex flex-col items-center justify-center gap-1 p-2 rounded-xl transition-all", active ? "text-primary bg-primary/10" : "text-muted-foreground")}>
+    {icon}
+    <span className="text-[10px] font-medium">{label}</span>
+  </div>
+);
+
 export default async function Dashboard() {
   const currentDate = new Date();
   const dayNameEn = format(currentDate, "EEEE");
@@ -480,8 +499,8 @@ export default async function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex font-sans selection:bg-primary/30">
-      {/* Sidebar Navigation */}
-      <aside className="w-20 lg:w-64 border-r border-border bg-card/50 backdrop-blur-xl flex flex-col fixed h-full z-20 transition-all duration-300">
+      {/* Sidebar Navigation - Hidden on Mobile */}
+      <aside className="hidden md:flex w-20 lg:w-64 border-r border-border bg-card/50 backdrop-blur-xl flex-col fixed h-full z-20 transition-all duration-300">
         <div className="p-6 border-b border-border flex items-center gap-3 justify-center lg:justify-start">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center shadow-lg shadow-primary/20 shrink-0">
             <span className="font-bold text-white text-xl">Z</span>
@@ -505,8 +524,19 @@ export default async function Dashboard() {
         </div>
       </aside>
 
+      {/* Mobile Bottom Navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-background/80 backdrop-blur-lg border-t border-white/10 z-50 flex items-center justify-around px-2 safe-area-bottom pb-safe">
+        <NavItemMobile icon={<LayoutDashboard size={20} />} label="Misión" active />
+        <NavItemMobile icon={<CheckSquare size={20} />} label="Logs" />
+        <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center -mt-6 shadow-lg shadow-primary/40 border-4 border-background">
+          <Zap size={24} className="text-white" />
+        </div>
+        <NavItemMobile icon={<BarChart3 size={20} />} label="Métricas" />
+        <NavItemMobile icon={<Settings size={20} />} label="Config" />
+      </nav>
+
       {/* Main Content Area */}
-      <main className="flex-1 ml-20 lg:ml-64 transition-all duration-300">
+      <main className="flex-1 ml-0 md:ml-20 lg:ml-64 transition-all duration-300 pb-24 md:pb-0">
 
         {/* Header containing Date and Context */}
         <header className="h-20 border-b border-border flex items-center justify-between px-8 bg-background/80 backdrop-blur-md sticky top-0 z-10 supports-[backdrop-filter]:bg-background/60">
@@ -719,30 +749,13 @@ export default async function Dashboard() {
 
         </div>
       </main>
-    </div>
+    </div >
   );
 }
 
 // --- Sub-Components ---
 
-function NavItem({ icon, label, active = false }: { icon: React.ReactNode; label: string; active?: boolean }) {
-  return (
-    <button
-      className={cn(
-        "hidden lg:flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group",
-        active
-          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-      )}
-    >
-      <div className={cn("transition-transform group-hover:scale-110", active ? "" : "opacity-70")}>
-        {React.cloneElement(icon as React.ReactElement<{ size?: number; className?: string }>, { size: 18 })}
-      </div>
-      <span>{label}</span>
-      {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white opacity-50"></div>}
-    </button>
-  );
-}
+
 
 function SliderInput({ label, icon, defaultValue }: { label: string; icon: React.ReactNode; defaultValue: number }) {
   return (
