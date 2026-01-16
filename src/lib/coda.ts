@@ -75,6 +75,7 @@ export async function getLatestBiometrics(): Promise<BiometricsData | null> {
         console.log("Raw Row Values:", JSON.stringify(values, null, 2));
         console.log("------------------");
 
+
         // 3. Map Coda columns to our interface
         return {
             date: values["Date"] || new Date().toISOString(),
@@ -86,5 +87,96 @@ export async function getLatestBiometrics(): Promise<BiometricsData | null> {
     } catch (error) {
         console.error("Error fetching biometrics:", error);
         return null;
+    }
+}
+
+// --- Notes Integration ---
+
+
+export interface NoteData {
+    title: string;
+    type: 'Meeting' | 'Webinar' | 'Idea' | 'Other';
+    rawText: string;
+    summary: string;
+    project?: string; // New Project field
+    tags?: string;
+    url?: string; // e.g. Perplexity link if available
+}
+
+
+
+
+
+export async function createNote(
+    note: NoteData,
+    table: string = "Notes_Inbox",
+    targetDocId?: string,
+    targetApiToken?: string,
+    columnMapping?: Record<string, string>
+): Promise<boolean> {
+    const docId = targetDocId || CODA_DOC_ID;
+    const token = targetApiToken || CODA_API_TOKEN;
+
+    if (!token || !docId) {
+        console.error("Missing Coda Env Variables");
+        return false;
+    }
+
+    // Default Mapping (English)
+    const map = {
+        "Title": "Title",
+        "Type": "Type",
+        "Project": "Project",
+        "Raw Text": "Raw Text",
+        "Summary": "Summary",
+        "Tags": "Tags",
+        "Date": "Date",
+        ...columnMapping // Override with custom mapping if provided
+    };
+
+    try {
+        const url = `https://coda.io/apis/v1/docs/${docId}/tables/${table}/rows`;
+
+        const payload = {
+            rows: [
+                {
+                    cells: [
+                        { column: map["Title"], value: note.title },
+                        { column: map["Type"], value: note.type },
+                        { column: map["Project"], value: note.project || "" },
+                        { column: map["Raw Text"], value: note.rawText },
+                        { column: map["Summary"], value: note.summary },
+                        { column: map["Tags"], value: note.tags || "" },
+                        { column: map["Date"], value: new Date().toISOString() } // Auto-add date
+                    ]
+                }
+            ]
+        };
+
+
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+            const errorText = await res.text();
+            console.error(`Failed to create note in Coda table '${table}' (Doc: ${docId}, Token: ...${token.slice(-4)}):`, res.status, errorText);
+            return false;
+        }
+
+        console.log(`Successfully created note in Coda table '${table}' (Doc: ${docId})`);
+        return true;
+
+
+
+
+    } catch (error) {
+        console.error("Error creating note:", error);
+        return false;
     }
 }
