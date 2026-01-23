@@ -3,9 +3,7 @@ import { createNote, NoteData } from '@/lib/coda';
 import OpenAI from 'openai';
 import { SYSTEM_PROMPT_PM } from '@/lib/prompts';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+
 
 export async function POST(request: Request) {
     try {
@@ -29,6 +27,10 @@ export async function POST(request: Request) {
                 const dateStr = today.getFullYear().toString().slice(-2) +
                     (today.getMonth() + 1).toString().padStart(2, '0') +
                     today.getDate().toString().padStart(2, '0'); // YYMMDD
+
+                const openai = new OpenAI({
+                    apiKey: process.env.OPENAI_API_KEY,
+                });
 
                 const completion = await openai.chat.completions.create({
                     messages: [
