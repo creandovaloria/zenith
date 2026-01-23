@@ -67,8 +67,11 @@ export async function GET(request: Request) {
             }
         }
 
-        // 3. Logic: Monthly Report (If today is the 1st of the month)
-        // Note: Cron job frequency on Vercel determines this, but we can double check date here.
+        // 3. Logic: Monthly Report (If today is the 1st of the month OR forced via URL)
+        // Check URL params for ?forceReport=true
+        const { searchParams } = new URL(request.url);
+        const forceReport = searchParams.get('forceReport') === 'true';
+
         const today = new Date();
         const isFirstOfMonth = today.getDate() === 1;
 
@@ -89,8 +92,8 @@ export async function GET(request: Request) {
         }
 
         // SEND MONTHLY REPORT
-        if (isFirstOfMonth) {
-            console.log("First of month detected. Generating Executive Summary.");
+        if (isFirstOfMonth || forceReport) {
+            console.log("Generating Executive Summary (Scheduled or Forced).");
             const reportHtml = generateMonthlyReportHtml(personalSubs, businessSubs);
 
             await resend.emails.send({
