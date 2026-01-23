@@ -25,7 +25,9 @@ import {
   Sunset,
   Coffee,
   CloudSun,
-  CreditCard
+  CreditCard,
+  Bell,
+  FileText
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getLatestBiometrics } from "@/lib/coda";
@@ -552,7 +554,8 @@ export default async function Dashboard() {
         </nav>
 
         <div className="p-4 border-t border-border space-y-2">
-          <NavItem icon={<Clock />} label="Forzar Revisión" href="/api/cron/subscriptions" />
+          <NavItem icon={<Bell />} label="Check Alertas" href="/api/cron/subscriptions" />
+          <NavItem icon={<FileText />} label="Reporte Mensual" href="/api/cron/subscriptions?forceReport=true" />
           <NavItem icon={<Settings />} label="Configuración" />
         </div>
       </aside>
