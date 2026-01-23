@@ -197,10 +197,11 @@ export interface Subscription {
     notes: string;
 }
 
-export async function getSubscriptions(tableName: string, docId?: string): Promise<Subscription[]> {
+export async function getSubscriptions(tableName: string, docId?: string, apiToken?: string): Promise<Subscription[]> {
     const targetDocId = docId || process.env.CODA_DOC_ID;
+    const token = apiToken || CODA_API_TOKEN;
 
-    if (!CODA_API_TOKEN || !targetDocId) {
+    if (!token || !targetDocId) {
         console.error("Missing Coda Env Variables for Subscriptions");
         return [];
     }
@@ -210,7 +211,7 @@ export async function getSubscriptions(tableName: string, docId?: string): Promi
 
         const res = await fetch(url, {
             headers: {
-                Authorization: `Bearer ${CODA_API_TOKEN}`,
+                Authorization: `Bearer ${token}`,
             },
             next: { revalidate: 0 }, // Always fetch fresh
         });

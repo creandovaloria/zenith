@@ -3,43 +3,47 @@ import { getSubscriptions, Subscription } from '@/lib/coda';
 import { Resend } from 'resend';
 
 // Environment variables
-const CODA_DOC_ID_SUBSCRIPTIONS = process.env.CODA_DOC_ID_SUBSCRIPTIONS;
+const CODA_DOC_ID_PERSONAL = process.env.CODA_DOC_ID_SUBSCRIPTIONS || process.env.CODA_DOC_ID; // Fallback
+const CODA_DOC_ID_BUSINESS = process.env.CODA_DOC_ID_BUSINESS;
+
+const CODA_API_TOKEN_BUSINESS = process.env.CODA_API_TOKEN_BUSINESS;
+
 const YOUR_EMAIL = process.env.YOUR_EMAIL || "creandovalor.ia@gmail.com";
 
 export async function GET(request: Request) {
-    // Initialize Resend lazily or with a check
+    // ... (Resend init same as before ... )
     const resendApiKey = process.env.RESEND_API_KEY;
     if (!resendApiKey) {
         console.error("Missing RESEND_API_KEY");
-        // If called via Cron, we want to know it failed.
-        // But during build, if this path isn't mistakenly prerendered (it shouldn't be for dynamic API), it should be fine.
-        // However, the previous error happened at top-level scope execution.
         return NextResponse.json({ error: 'Missing Email Config' }, { status: 500 });
     }
     const resend = new Resend(resendApiKey);
 
-    // Basic security to prevent random public access if needed, 
-    // but Vercel Cron usually requires verification or we can leave public if the randomness of the URL is enough for now (it isn't).
-    // For now, checks for a simple secret if present, or just runs.
     const authHeader = request.headers.get('authorization');
     if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     try {
-        console.log("--- Starting Subscriptions Cron ---");
+        console.log("--- Starting Subscriptions Cron (Multi-Account) ---");
 
-        if (!CODA_DOC_ID_SUBSCRIPTIONS) {
-            console.error("CODA_DOC_ID_SUBSCRIPTIONS is missing");
-            return NextResponse.json({ error: 'Configuration Error' }, { status: 500 });
+        // 1. Fetch Data - PERSONAL (Uses Default Token in lib if not provided, but we pass Doc ID explicit)
+        console.log("Fetching Personal Subscriptions...");
+        let personalSubs: Subscription[] = [];
+        if (CODA_DOC_ID_PERSONAL) {
+            personalSubs = await getSubscriptions("Suscripciones_Personal", CODA_DOC_ID_PERSONAL);
+        } else {
+            console.warn("Skipping Personal: Missing CODA_DOC_ID_SUBSCRIPTIONS");
         }
 
-        // 1. Fetch Data
-        console.log("Fetching Personal Subscriptions...");
-        const personalSubs = await getSubscriptions("Suscripciones_Personal", CODA_DOC_ID_SUBSCRIPTIONS);
-
+        // 2. Fetch Data - BUSINESS (Uses Explicit Token and Doc ID)
         console.log("Fetching Business Subscriptions...");
-        const businessSubs = await getSubscriptions("Suscripciones_Negocio", CODA_DOC_ID_SUBSCRIPTIONS);
+        let businessSubs: Subscription[] = [];
+        if (CODA_DOC_ID_BUSINESS && CODA_API_TOKEN_BUSINESS) {
+            businessSubs = await getSubscriptions("Suscripciones_Negocio", CODA_DOC_ID_BUSINESS, CODA_API_TOKEN_BUSINESS);
+        } else {
+            console.warn("Skipping Business: Missing CODA_DOC_ID_BUSINESS or CODA_API_TOKEN_BUSINESS");
+        }
 
         const allSubs = [...personalSubs, ...businessSubs];
         console.log(`Found ${allSubs.length} total subscriptions.`);
