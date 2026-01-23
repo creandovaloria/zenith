@@ -551,7 +551,8 @@ export default async function Dashboard() {
           <NavItem icon={<BookOpen />} label="Biblioteca" />
         </nav>
 
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border space-y-2">
+          <NavItem icon={<Clock />} label="Forzar Revisión" href="/api/cron/subscriptions" />
           <NavItem icon={<Settings />} label="Configuración" />
         </div>
       </aside>
