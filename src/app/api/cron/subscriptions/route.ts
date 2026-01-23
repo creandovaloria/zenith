@@ -4,7 +4,7 @@ import { Resend } from 'resend';
 
 // Environment variables
 const CODA_DOC_ID_PERSONAL = process.env.CODA_DOC_ID_SUBSCRIPTIONS || process.env.CODA_DOC_ID; // Fallback
-const CODA_DOC_ID_BUSINESS = process.env.CODA_DOC_ID_BUSINESS;
+const CODA_DOC_ID_BUSINESS = process.env.CODA_DOC_ID_BUSINESS_SUBSCRIPTIONS || process.env.CODA_DOC_ID_BUSINESS;
 
 const CODA_API_TOKEN_BUSINESS = process.env.CODA_API_TOKEN_BUSINESS;
 
