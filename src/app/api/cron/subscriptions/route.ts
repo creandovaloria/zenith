@@ -50,7 +50,7 @@ export async function GET(request: Request) {
 
         // 2. Logic: Priority Alerts (Trials ending soon)
         const alerts: Subscription[] = [];
-        const warningDays = 7;
+        const warningDays = 3;
 
         for (const sub of allSubs) {
             // Check for Active Trials
