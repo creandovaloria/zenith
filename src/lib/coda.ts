@@ -15,8 +15,13 @@ const safeNumber = (val: any): number => {
     if (val === undefined || val === null) return 0;
     if (typeof val === 'number') return val;
     if (typeof val === 'string') {
-        // Remove commas and try parsing
-        const clean = val.replace(/,/g, '').trim();
+        // Handle duration strings like "29 days" or "1 day"
+        if (val.includes('day')) {
+            const days = parseInt(val);
+            return isNaN(days) ? 0 : days;
+        }
+        // Handle currency strings like "$123.00", remove '$' and ','
+        const clean = val.replace(/[$,]/g, '').trim();
         const num = Number(clean);
         return isNaN(num) ? 0 : num;
     }

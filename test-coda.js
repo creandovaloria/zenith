@@ -27,7 +27,8 @@ function fetchCoda(url, label) {
                 const json = JSON.parse(data);
                 console.log(`✅ Éxito. Items encontrados: ${json.items ? json.items.length : 0}`);
                 if (json.items && json.items.length > 0) {
-                    console.log("Documentos (ID - Nombre):", JSON.stringify(json.items.map(i => `${i.id} - ${i.name}`), null, 2));
+                    // console.log("Documentos (ID - Nombre):", JSON.stringify(json.items.map(i => `${i.id} - ${i.name}`), null, 2));
+                    console.log("Full Valid Item:", JSON.stringify(json.items[0], null, 2));
                 } else {
                     console.log("⚠️ La lista está vacía.");
                 }
@@ -42,7 +43,7 @@ function fetchCoda(url, label) {
 fetchCoda(`https://coda.io/apis/v1/docs/${DOC_ID}/tables`, "Listado de Tablas en el Doc");
 
 // 2. Intentar leer Suscripciones_Negocio (Comentado hasta saber el nombre)
-// fetchCoda(`https://coda.io/apis/v1/docs/${DOC_ID}/tables/Suscripciones_Negocio/rows?limit=1`, "Lectura Tabla Negocio");
+fetchCoda(`https://coda.io/apis/v1/docs/${DOC_ID}/tables/Suscripciones_Negocio/rows?limit=1`, "Lectura Tabla Negocio");
 
 // 3. Intentar leer Suscripciones_Negocio
 // fetchCoda(`https://coda.io/apis/v1/docs/${DOC_ID}/tables/Suscripciones_Negocio/rows?limit=1`, "Lectura Tabla Negocio");
