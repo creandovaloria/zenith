@@ -180,3 +180,71 @@ export async function createNote(
         return false;
     }
 }
+
+// --- Subscriptions System ---
+
+export interface Subscription {
+    id: string; // Row ID
+    name: string;
+    status: string; // 'Trial Activo', 'Activa', etc.
+    action: string;
+    renewalDate: string | null; // ISO Date String
+    daysRemaining: number;
+    alert: boolean;
+    cost: number;
+    email: string;
+    paymentMethod: string;
+    notes: string;
+}
+
+export async function getSubscriptions(tableName: string, docId?: string): Promise<Subscription[]> {
+    const targetDocId = docId || process.env.CODA_DOC_ID;
+
+    if (!CODA_API_TOKEN || !targetDocId) {
+        console.error("Missing Coda Env Variables for Subscriptions");
+        return [];
+    }
+
+    try {
+        const url = `https://coda.io/apis/v1/docs/${targetDocId}/tables/${tableName}/rows?useColumnNames=true&limit=100`;
+
+        const res = await fetch(url, {
+            headers: {
+                Authorization: `Bearer ${CODA_API_TOKEN}`,
+            },
+            next: { revalidate: 0 }, // Always fetch fresh
+        });
+
+        if (!res.ok) {
+            console.error(`Failed to fetch subscriptions from table '${tableName}':`, res.status, res.statusText);
+            return [];
+        }
+
+        const data = await res.json();
+        const rows = data.items;
+
+        if (!rows || rows.length === 0) return [];
+
+        return rows.map((row: any) => {
+            const val = row.values;
+            // Helper to get value ignoring accents/case if possible, but for now strict mapping based on user plan
+            return {
+                id: row.id,
+                name: val["Suscripción"] || "Unknown",
+                status: val["Estado"] || "",
+                action: val["Acción"] || "",
+                renewalDate: val["Renovación"] ? val["Renovación"] : null, // Coda API usually returns ISO strings for dates
+                daysRemaining: safeNumber(val["Dias Restantes"] || val["Días Restantes"]),
+                alert: val["Alertar"] === true,
+                cost: safeNumber(val["Costo (MXN)"] || val["Costo"]),
+                email: val["Email"] || "",
+                paymentMethod: val["Método de Pago"] || "",
+                notes: val["Notas"] || ""
+            };
+        });
+
+    } catch (error) {
+        console.error("Error fetching subscriptions:", error);
+        return [];
+    }
+}

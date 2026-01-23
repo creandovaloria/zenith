@@ -13,8 +13,10 @@
     "date-fns": "^4.1.0",
     "lucide-react": "^0.562.0",
     "next": "16.1.1",
+    "openai": "^6.16.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "resend": "^6.8.0",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {

@@ -24,7 +24,8 @@ import {
   Sunrise,
   Sunset,
   Coffee,
-  CloudSun
+  CloudSun,
+  CreditCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getLatestBiometrics } from "@/lib/coda";
@@ -469,24 +470,50 @@ const getAgendaForDay = (dayName: string): Phase[] => {
   }
 };
 
-const NavItem = ({ icon, label, active = false }: { icon: React.ReactNode; label: string; active?: boolean }) => (
-  <div
-    className={cn(
-      "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer group",
-      active ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" : "text-muted-foreground hover:bg-white/5 hover:text-white"
-    )}
-  >
-    <div className={cn("transition-transform duration-200 group-hover:scale-110", active && "scale-110")}>{icon}</div>
-    <span className="font-medium text-sm lg:text-base hidden lg:block">{label}</span>
-  </div>
-);
 
-const NavItemMobile = ({ icon, label, active = false }: { icon: React.ReactNode; label: string; active?: boolean }) => (
-  <div className={cn("flex flex-col items-center justify-center gap-1 p-2 rounded-xl transition-all", active ? "text-primary bg-primary/10" : "text-muted-foreground")}>
-    {icon}
-    <span className="text-[10px] font-medium">{label}</span>
-  </div>
-);
+const NavItem = ({ icon, label, active = false, href }: { icon: React.ReactNode; label: string; active?: boolean; href?: string }) => {
+  const content = (
+    <div
+      className={cn(
+        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer group",
+        active ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" : "text-muted-foreground hover:bg-white/5 hover:text-white"
+      )}
+    >
+      <div className={cn("transition-transform duration-200 group-hover:scale-110", active && "scale-110")}>{icon}</div>
+      <span className="font-medium text-sm lg:text-base hidden lg:block">{label}</span>
+      {href && <ArrowRight className="w-4 h-4 ml-auto opacity-0 group-hover:opacity-50 transition-opacity" />}
+    </div>
+  );
+
+  if (href) {
+    return (
+      <a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel={href.startsWith("http") ? "noopener noreferrer" : undefined}>
+        {content}
+      </a>
+    );
+  }
+
+  return content;
+};
+
+const NavItemMobile = ({ icon, label, active = false, href }: { icon: React.ReactNode; label: string; active?: boolean; href?: string }) => {
+  const content = (
+    <div className={cn("flex flex-col items-center justify-center gap-1 p-2 rounded-xl transition-all", active ? "text-primary bg-primary/10" : "text-muted-foreground")}>
+      {icon}
+      <span className="text-[10px] font-medium">{label}</span>
+    </div>
+  );
+
+  if (href) {
+    return (
+      <a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel={href.startsWith("http") ? "noopener noreferrer" : undefined}>
+        {content}
+      </a>
+    );
+  }
+
+  return content;
+};
 
 export default async function Dashboard() {
   // Fix Timezone: Vercel server is UTC. We align to User Time (UTC-6).
@@ -519,6 +546,7 @@ export default async function Dashboard() {
           <NavItem icon={<LayoutDashboard />} label="Mission Control" active />
           <NavItem icon={<CheckSquare />} label="Daily Logs" />
           <NavItem icon={<Zap />} label="Automatizaciones" />
+          <NavItem icon={<CreditCard />} label="Suscripciones" href="https://coda.io/d/Suscripciones_djqPGM2Nybv/Indice-de-Suscripciones_suvjGfgr#Suscripciones_tumyAYrY" />
           <NavItem icon={<BarChart3 />} label="Métricas" />
           <NavItem icon={<BookOpen />} label="Biblioteca" />
         </nav>

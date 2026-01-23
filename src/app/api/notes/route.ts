@@ -1,35 +1,80 @@
-
 import { NextResponse } from 'next/server';
 import { createNote, NoteData } from '@/lib/coda';
+import OpenAI from 'openai';
+import { SYSTEM_PROMPT_PM } from '@/lib/prompts';
+
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+});
 
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { text, type, title, summary, category, project } = body;
+        let { text, type, title, summary, category, project } = body;
 
+        // Basic Validation
         if (!text) {
             return NextResponse.json({ error: 'Missing "text" field' }, { status: 400 });
         }
 
-        // Default Values
+        // --- AI INTELIGENCE LAYER (Zenith Brain) ---
+        // If the shortcut sends raw text without a proper summary, we generate it here.
+        const needsAI = !summary || summary === "Pending AI Summary..." || summary === "Respuesta" || summary === "ResumenIA" || summary === "";
+
+        if (needsAI) {
+            console.log("Invoking Zenith Brain for analysis...");
+            try {
+                // Formatting Date for the Title
+                const today = new Date();
+                const dateStr = today.getFullYear().toString().slice(-2) +
+                    (today.getMonth() + 1).toString().padStart(2, '0') +
+                    today.getDate().toString().padStart(2, '0'); // YYMMDD
+
+                const completion = await openai.chat.completions.create({
+                    messages: [
+                        {
+                            role: "system",
+                            content: SYSTEM_PROMPT_PM
+                        },
+                        {
+                            role: "user",
+                            content: `Contexto: ${category || 'General'} / Proyecto: ${project || 'N/A'} / Tipo Manual: ${type || 'Definir'}
+                            
+                            Analiza esta Transcripción:
+                            ${text.substring(0, 10000)}`
+                        }
+                    ],
+                    model: "gpt-4o",
+                    response_format: { type: "json_object" },
+                });
+
+                const aiContent = completion.choices[0].message.content;
+                if (aiContent) {
+                    const aiResponse = JSON.parse(aiContent);
+
+                    // Update fields with AI wisdom
+                    if (aiResponse.suggested_title) title = aiResponse.suggested_title;
+                    if (aiResponse.final_type) type = aiResponse.final_type;
+                    if (aiResponse.summary_content) summary = aiResponse.summary_content;
+                }
+
+            } catch (aiError) {
+                console.error("OpenAI Error:", aiError);
+                summary = "Error en análisis IA. Texto crudo guardado.";
+            }
+        }
+        // -------------------------------------------
+
+        // Defaults Handling
         const noteType = type || 'Meeting';
-        const noteTitle = title || `Note - ${new Date().toLocaleDateString()}`;
-
-        // If the user sends a pre-calculated summary (e.g. from Perplexity via the Shortcut), use it.
-        // Otherwise, use the text itself or a placeholder.
-        const noteSummary = summary || "Pending AI Summary...";
-
-
-
-
+        const noteTitle = title || `Nota - ${new Date().toLocaleDateString()}`;
+        const noteSummary = summary || "Sin resumen";
 
         // Determine Table Name & Doc based on Category
-        // Categories: 'Business', 'Personal' (Default: Personal)
         let tableName = 'Personal_Inbox';
         let docId = undefined;
         let apiToken = undefined;
 
-        // Spanish Column Mapping (Used for both Business and Personal now)
         const spanishMapping = {
             "Title": "Título nota",
             "Type": "Tipo evento",
@@ -39,28 +84,15 @@ export async function POST(request: Request) {
             "Tags": "Etiquetas",
             "Date": "Fecha y hora de creación automatica"
         };
-
         let columnMapping = spanishMapping;
 
         if (category === 'Business') {
-            tableName = 'business_inbox'; // Lowercase as per user's table
-
-            // Option to use a separate Doc for Business
-            if (process.env.CODA_DOC_ID_BUSINESS) {
-                docId = process.env.CODA_DOC_ID_BUSINESS;
-            }
-            // Option to use a separate Token for Business (different user)
-            if (process.env.CODA_API_TOKEN_BUSINESS) {
-                apiToken = process.env.CODA_API_TOKEN_BUSINESS;
-            }
+            tableName = 'business_inbox';
+            if (process.env.CODA_DOC_ID_BUSINESS) docId = process.env.CODA_DOC_ID_BUSINESS;
+            if (process.env.CODA_API_TOKEN_BUSINESS) apiToken = process.env.CODA_API_TOKEN_BUSINESS;
         } else {
-            // Personal
-            tableName = 'Personal_Inbox'; // Matches image
-
-            // Option to use a separate Doc for Personal (Second Brain)
-            if (process.env.CODA_DOC_ID_PERSONAL) {
-                docId = process.env.CODA_DOC_ID_PERSONAL;
-            }
+            tableName = 'Personal_Inbox'; // Update this if your personal table name is different
+            if (process.env.CODA_DOC_ID_PERSONAL) docId = process.env.CODA_DOC_ID_PERSONAL;
         }
 
         const newNote: NoteData = {
@@ -74,10 +106,8 @@ export async function POST(request: Request) {
 
         const success = await createNote(newNote, tableName, docId, apiToken, columnMapping);
 
-
-
         if (success) {
-            return NextResponse.json({ success: true, message: `Note saved to ${tableName}` });
+            return NextResponse.json({ success: true, message: `Note saved to ${tableName} as '${noteTitle}'` });
         } else {
             return NextResponse.json({ error: 'Failed to save to Coda' }, { status: 500 });
         }
