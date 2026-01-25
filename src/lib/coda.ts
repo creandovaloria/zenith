@@ -100,16 +100,22 @@ export async function getLatestBiometrics(): Promise<BiometricsData | null> {
 
 export interface NoteData {
     title: string;
-    type: 'Meeting' | 'Webinar' | 'Idea' | 'Other';
+    type: string;
     rawText: string;
     summary: string;
     project?: string; // New Project field
     tags?: string;
     url?: string; // e.g. Perplexity link if available
+    image_url?: string; // New field for Dropbox/Cloudinary link
+    finance?: { // New field for Financial Transactions
+        amount: number;
+        currency: string;
+        concept: string;
+        category: string;
+        is_business: boolean;
+        is_finance: boolean;
+    };
 }
-
-
-
 
 
 export async function createNote(
@@ -126,6 +132,54 @@ export async function createNote(
         console.error("Missing Coda Env Variables");
         return false;
     }
+
+    // --- LOGIC: REROUTE TO FINANCE TABLE IF IT IS A GASTO ---
+    if (note.finance && note.finance.is_finance) {
+        // Override table to Finance_Projection (assuming it exists in the provided Doc)
+        const financeTable = "Finance_Projection";
+        const financeUrl = `https://coda.io/apis/v1/docs/${docId}/tables/${financeTable}/rows`;
+
+        // Payload for Finance
+        const financePayload = {
+            rows: [ // Array of rows
+                {
+                    cells: [
+                        { column: "Concepto", value: note.finance.concept || note.title },
+                        { column: "Monto", value: note.finance.amount },
+                        { column: "Categoría", value: note.finance.category },
+                        { column: "Fecha de Pago", value: new Date().toLocaleDateString('en-CA') }, // YYYY-MM-DD
+                        { column: "Estado", value: "✅ Pagado" }, // Auto-mark as paid
+                        { column: "Comprobante", value: note.image_url || "" }, // Link to Dropbox
+                        { column: "Notas", value: note.summary || note.rawText || "" }
+                    ]
+                }
+            ]
+        };
+
+        try {
+            console.log(`💸 Routing Financial Note to Table: ${financeTable}`);
+            const res = await fetch(financeUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(financePayload),
+            });
+
+            if (!res.ok) {
+                const errText = await res.text();
+                // If Finance table doesn't exist, we fallback to normal Note creation
+                console.error(`Failed to save to Finance Table: ${res.status} - ${errText}. Falling back to Note.`);
+            } else {
+                console.log("✅ Finance Row Created Successfully!");
+                return true; // Stop here, don't create a duplicate Note
+            }
+        } catch (e) {
+            console.error("Error creating Finance Row:", e);
+        }
+    }
+    // -------------------------------------------------------
 
     // Default Mapping (English)
     const map = {

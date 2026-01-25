@@ -58,6 +58,13 @@ export async function POST(request: Request) {
                     if (aiResponse.suggested_title) title = aiResponse.suggested_title;
                     if (aiResponse.final_type) type = aiResponse.final_type;
                     if (aiResponse.summary_content) summary = aiResponse.summary_content;
+
+                    // New: Handle Financial Data
+                    if (aiResponse.finance_details && aiResponse.finance_details.amount > 0) {
+                        // It's a financial transaction!
+                        // We will append this data to the JSON body so we can pass it to Coda
+                        body.finance = aiResponse.finance_details;
+                    }
                 }
 
             } catch (aiError) {
