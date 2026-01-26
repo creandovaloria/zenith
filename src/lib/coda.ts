@@ -1,7 +1,7 @@
 
 const CODA_API_TOKEN = process.env.CODA_API_TOKEN;
 const CODA_DOC_ID = process.env.CODA_DOC_ID; // Notes Inbox
-const CODA_DOC_ID_FINANCE = process.env.CODA_DOC_ID_FINANCE; // Financial Projection Doc
+const CODA_DOC_ID_PERSONAL_FINANCE = process.env.CODA_DOC_ID_PERSONAL_FINANCE; // Financial Projection Doc
 
 // Define the shape of our Biometrics data
 export interface BiometricsData {
@@ -137,7 +137,7 @@ export async function createNote(
     // --- LOGIC: REROUTE TO FINANCE TABLE IF IT IS A GASTO ---
     if (note.finance && note.finance.is_finance) {
         // Use Finance Projection Doc ID if available, otherwise fallback to the passed docId
-        const targetFinanceDoc = CODA_DOC_ID_FINANCE || docId;
+        const targetFinanceDoc = CODA_DOC_ID_PERSONAL_FINANCE || docId;
         const financeTable = "Finance_Projection";
         const financeUrl = `https://coda.io/apis/v1/docs/${targetFinanceDoc}/tables/${financeTable}/rows`;
 
