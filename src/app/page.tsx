@@ -30,7 +30,8 @@ import {
   FileText
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getLatestBiometrics } from "@/lib/coda";
+import { getLatestBiometrics, getFinanceProjections, FinanceItem } from "@/lib/coda";
+import { MarkPaidButton } from "@/components/MarkPaidButton";
 
 // --- Types ---
 // --- Types ---
@@ -529,6 +530,23 @@ export default async function Dashboard() {
 
   // Fetch real data form Coda
   const biometrics = await getLatestBiometrics();
+  const financeItems = await getFinanceProjections();
+
+  // Finance Calculations
+  const currentMonthIndex = currentDate.getMonth(); // 0-11
+  const currentMonthName = format(currentDate, "MMMM", { locale: es });
+
+  const currentMonthItems = financeItems.filter(item => {
+    const d = new Date(item.date);
+    return d.getMonth() === currentMonthIndex && d.getFullYear() === currentDate.getFullYear();
+  });
+
+  const monthlyTotal = currentMonthItems.reduce((acc, item) => acc + item.amount, 0);
+  const pendingItems = financeItems
+    .filter(item => item.status !== "✅ Pagado" && item.status !== "Pagado")
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .slice(0, 5); // Show top 5 pending
+
 
   return (
     <div className="min-h-screen bg-background text-foreground flex font-sans selection:bg-primary/30">
@@ -546,6 +564,7 @@ export default async function Dashboard() {
 
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           <NavItem icon={<LayoutDashboard />} label="Mission Control" active />
+          <NavItem icon={<CreditCard />} label="Finanzas" href="/finance" />
           <NavItem icon={<CheckSquare />} label="Daily Logs" />
           <NavItem icon={<Zap />} label="Automatizaciones" />
           <NavItem icon={<CreditCard />} label="Suscripciones" href="https://coda.io/d/Suscripciones_djqPGM2Nybv/Indice-de-Suscripciones_suvjGfgr#Suscripciones_tumyAYrY" />
@@ -721,10 +740,19 @@ export default async function Dashboard() {
               </div>
             </div>
 
+
             {/* SECTION 3: ANTIFRAGILE & TRACKING */}
             <div className="space-y-6">
 
+              {/* Finance Card */}
+              <FinanceCard
+                total={monthlyTotal}
+                monthName={currentMonthName}
+                pendingItems={pendingItems}
+              />
+
               {/* Antifragile Challenge */}
+
               <div className="p-6 rounded-2xl border border-border bg-gradient-to-br from-card to-card/50 shadow-sm relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-20 bg-orange-500/5 blur-3xl rounded-full pointer-events-none"></div>
                 <h3 className="font-semibold text-lg flex items-center gap-2 mb-4 relative z-10">
@@ -791,8 +819,6 @@ export default async function Dashboard() {
 
 // --- Sub-Components ---
 
-
-
 function SliderInput({ label, icon, defaultValue }: { label: string; icon: React.ReactNode; defaultValue: number }) {
   return (
     <div className="space-y-2">
@@ -807,9 +833,78 @@ function SliderInput({ label, icon, defaultValue }: { label: string; icon: React
         ></div>
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-white/5 transition-opacity"></div>
       </div>
+    </div >
+  );
+}
+
+function FinanceCard({
+  total,
+  monthName,
+  pendingItems
+}: {
+  total: number;
+  monthName: string;
+  pendingItems: FinanceItem[]
+}) {
+  return (
+    <div className="p-6 rounded-2xl border border-border bg-card shadow-sm space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg flex items-center gap-2">
+          <CreditCard className="w-5 h-5 text-emerald-500" />
+          Finanzas
+        </h3>
+        <span className="text-xs text-muted-foreground font-mono bg-muted px-2 py-1 rounded capitalize">
+          {monthName}
+        </span>
+      </div>
+
+      <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+        <p className="text-sm text-emerald-400 font-medium mb-1">Total Compromisos</p>
+        <p className="text-3xl font-bold text-emerald-500">
+          ${total.toLocaleString('es-MX', { minimumFractionDigits: 0 })}
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-2">Próximos Pagos</p>
+        {pendingItems.length > 0 ? (
+          pendingItems.map((item) => (
+            <div key={item.id} className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg border border-border hover:bg-muted/50 transition-all group/item">
+              <div className="flex items-center gap-3 min-w-0">
+                <MarkPaidButton rowId={item.id} concept={item.concept} />
+                <div className="flex flex-col min-w-0">
+                  <span className="font-medium text-sm truncate pr-2">{item.concept}</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {format(new Date(item.date), "d 'de' MMM", { locale: es })}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <span className="font-mono text-sm font-semibold block">
+                  ${item.amount.toLocaleString()}
+                </span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${new Date(item.date) < new Date() ? "bg-red-500/20 text-red-400" : "bg-yellow-500/20 text-yellow-500"
+                  }`}>
+                  {new Date(item.date) < new Date() ? "Vencido" : "Pendiente"}
+                </span>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="text-center py-4 text-muted-foreground text-sm">
+            ¡Todo pagado! 🎉
+          </div>
+        )}
+      </div>
+      <div className="pt-2">
+        <a href="https://coda.io/d/Projection_d..." target="_blank" className="text-xs text-primary hover:underline flex items-center justify-end gap-1">
+          Ver detalle en Coda <ArrowRight className="w-3 h-3" />
+        </a>
+      </div>
     </div>
   );
 }
+
 
 function ObjectiveItem({ text, completed }: { text: string; completed: boolean }) {
   return (

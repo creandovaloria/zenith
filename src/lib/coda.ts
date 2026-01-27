@@ -259,7 +259,7 @@ export interface Subscription {
 }
 
 export async function getSubscriptions(tableName: string, docId?: string, apiToken?: string): Promise<Subscription[]> {
-    const targetDocId = docId || process.env.CODA_DOC_ID;
+    const targetDocId = docId || process.env.CODA_DOC_ID_SUBSCRIPTIONS || process.env.CODA_DOC_ID_BUSINESS_SUBSCRIPTIONS || process.env.CODA_DOC_ID;
     const token = apiToken || CODA_API_TOKEN;
 
     if (!token || !targetDocId) {
@@ -310,3 +310,151 @@ export async function getSubscriptions(tableName: string, docId?: string, apiTok
         return [];
     }
 }
+
+export interface FinanceItem {
+    id: string;
+    concept: string;
+    date: string; // ISO
+    amount: number;
+    status: string; // '⏳ Pendiente', '✅ Pagado', '❌ Vencido'
+    receipt: string;
+}
+
+export async function getFinanceProjections(docId?: string, apiToken?: string): Promise<FinanceItem[]> {
+    // Priority: Argument > Finance Core > Personal Subs > Business Subs > Personal Finance (Legacy) > Notes
+    const targetDocId = docId || process.env.CODA_DOC_ID_FINANCE_CORE || process.env.CODA_DOC_ID_SUBSCRIPTIONS || process.env.CODA_DOC_ID_BUSINESS_SUBSCRIPTIONS || process.env.CODA_DOC_ID_PERSONAL_FINANCE || process.env.CODA_DOC_ID;
+    const token = apiToken || CODA_API_TOKEN;
+
+    if (!token || !targetDocId) {
+        console.error("Missing Coda Env Variables for Finance");
+        return [];
+    }
+
+    try {
+        // Must use correct table name, from setup doc it is 'Finance_Projection'
+        const tableName = "Finance_Projection";
+        // Fetch rows
+        const url = `https://coda.io/apis/v1/docs/${targetDocId}/tables/${tableName}/rows?useColumnNames=true&limit=100`;
+
+        const res = await fetch(url, {
+            headers: { Authorization: `Bearer ${token}` },
+            next: { revalidate: 300 }, // Cache for 5 mins
+        });
+
+        if (!res.ok) {
+            console.error(`Failed to fetch finance projections from table '${tableName}':`, res.status, res.statusText);
+            return [];
+        }
+
+        const data = await res.json();
+        const rows = data.items;
+
+        if (!rows || rows.length === 0) return [];
+
+        return rows.map((row: any) => {
+            const val = row.values;
+            // Use safe defaults
+            return {
+                id: row.id,
+                concept: val["ID Gasto"] || val["Concepto"] || row.name || "Sin Concepto",
+                date: val["Fecha de Pago"] || new Date().toISOString(),
+                amount: safeNumber(val["Monto"]),
+                status: val["Estado"] || "⏳ Pendiente",
+                receipt: val["Comprobante"] || ""
+            };
+        });
+
+    } catch (error) {
+        console.error("Error fetching finance projections:", error);
+        return [];
+    }
+}
+
+export interface FinanceRule {
+    id: string;
+    name: string;
+    amount: number;
+    recurrence: string; // 'Mensual', 'Bimestral', etc.
+    day: number;
+    active: boolean;
+}
+
+export async function getFinanceRules(docId?: string, apiToken?: string): Promise<FinanceRule[]> {
+    const targetDocId = docId || process.env.CODA_DOC_ID_FINANCE_CORE || process.env.CODA_DOC_ID_SUBSCRIPTIONS || process.env.CODA_DOC_ID_BUSINESS_SUBSCRIPTIONS || process.env.CODA_DOC_ID;
+    const token = apiToken || CODA_API_TOKEN;
+
+    if (!token || !targetDocId) return [];
+
+    try {
+        const tableName = "Finance_Rules";
+        const url = `https://coda.io/apis/v1/docs/${targetDocId}/tables/${tableName}/rows?useColumnNames=true&limit=100`;
+
+        const res = await fetch(url, {
+            headers: { Authorization: `Bearer ${token}` },
+            next: { revalidate: 3600 }, // Cache for 1 hour
+        });
+
+        if (!res.ok) return [];
+
+        const data = await res.json();
+        const rows = data.items || [];
+
+        return rows.map((row: any) => {
+            const val = row.values;
+            return {
+                id: row.id,
+                name: val["Nombre"] || row.name,
+                amount: safeNumber(val["Monto Base"] || val["Monto"]),
+                recurrence: val["Tipo Recurrencia"] || "Unknown",
+                day: safeNumber(val["Día de Corte"] || val["Día"] || val["Day"]),
+                active: val["Estado"] === "Activo"
+            };
+        });
+    } catch (error) {
+        console.error("Error fetching finance rules:", error);
+        return [];
+    }
+}
+
+export async function updateFinanceStatus(rowId: string, status: string = "✅ Pagado", docId?: string, apiToken?: string): Promise<boolean> {
+    const targetDocId = docId || process.env.CODA_DOC_ID_FINANCE_CORE || process.env.CODA_DOC_ID_SUBSCRIPTIONS || process.env.CODA_DOC_ID;
+    const token = apiToken || CODA_API_TOKEN;
+
+    if (!token || !targetDocId) return false;
+
+    try {
+        const tableName = "Finance_Projection";
+        const url = `https://coda.io/apis/v1/docs/${targetDocId}/tables/${tableName}/rows/${rowId}`;
+
+        const payload = {
+            row: {
+                cells: [
+                    { column: "Estado", value: status }
+                ]
+            }
+        };
+
+        const res = await fetch(url, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+            const err = await res.text();
+            console.error("Error updating Coda row:", res.status, err);
+            return false;
+        }
+
+        return true;
+    } catch (error) {
+        console.error("Error in updateFinanceStatus:", error);
+        return false;
+    }
+}
+
+
+
