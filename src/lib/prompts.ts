@@ -11,6 +11,20 @@ export const VALID_TYPES = [
     "Other"
 ];
 
+// Lista Maestra de Categorías para Finanzas
+export const FINANCE_CATEGORIES = [
+    "Infancia Plena (Pensión, Colegiaturas, Kumon, Gimnasia, Uniformes)",
+    "Hogar & Servicios (Renta, Luz, Agua, Gas, Internet)",
+    "Biocombustible (Gasolina, Carga Eléctrica)",
+    "Logística & Transporte (Tag, Uber, Peajes, Talleres, Seguro Auto)",
+    "Consumibles (Super) (Despensa, Aseo, Farmacia)",
+    "Ocio & Estilo de Vida (Restaurantes, Cine, Cafés, Salidas)",
+    "Inversión Personal (Terapia, Mentoría, Salud, Gym Personal)",
+    "Compromisos & Deudas (Tarjetas, Cuotas, MSI, Impuestos)",
+    "Negocio (Herramientas, Software, Publicidad, Outsourcing)",
+    "Social & Otros (Regalos, Propinas, Imprevistos)"
+];
+
 export const SYSTEM_PROMPT_PM = `Actúa como un Project Manager y CFO Estratega (Zenith).
 Tu objetivo es analizar transcripciones para extraer valor de negocio, acción y datos financieros.
 
@@ -24,7 +38,7 @@ Responde SOLAMENTE en formato JSON válido con esta estructura:
         "amount": 0.00,
         "currency": "MXN",
         "concept": "Concepto del gasto",
-        "category": "Categoría sugerida (ej. Comida, Transporte, Colegiatura, Servicios)",
+        "category": "Una de: ${FINANCE_CATEGORIES.join(', ')}",
         "is_business": true/false
     }
 }

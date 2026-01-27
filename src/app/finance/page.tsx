@@ -38,6 +38,29 @@ export default async function FinancePage() {
     const pendingMonthly = totalMonthly - paidMonthly;
     const progressPercent = totalMonthly > 0 ? (paidMonthly / totalMonthly) * 100 : 0;
 
+    // Categorization logic for the chart
+    const categoryTotals: Record<string, number> = {};
+    rules.forEach(r => {
+        if (!r.active) return;
+        const cat = r.category || "General";
+        categoryTotals[cat] = (categoryTotals[cat] || 0) + r.amount;
+    });
+
+    const sortedCategories = Object.entries(categoryTotals)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5); // Top 5
+
+    const totalRulesAmount = Object.values(categoryTotals).reduce((a, b) => a + b, 0);
+
+    const chartData = sortedCategories.map(([label, val], idx) => {
+        const colors = ['bg-emerald-500', 'bg-blue-500', 'bg-orange-500', 'bg-violet-500', 'bg-pink-500'];
+        return {
+            label,
+            val: totalRulesAmount > 0 ? Math.round((val / totalRulesAmount) * 100) : 0,
+            color: colors[idx % colors.length]
+        };
+    });
+
     return (
         <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/30">
             {/* Header */}
@@ -114,7 +137,7 @@ export default async function FinancePage() {
                                             <div className="min-w-0">
                                                 <p className="font-semibold text-sm truncate">{rule.name}</p>
                                                 <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
-                                                    {rule.recurrence} • Día {rule.day}
+                                                    {rule.category || "General"} • {rule.recurrence} • Día {rule.day}
                                                 </p>
                                             </div>
                                             <span className="text-sm font-mono font-bold text-foreground/80 group-hover:text-primary transition-colors">
@@ -136,21 +159,19 @@ export default async function FinancePage() {
                                 Distribución de Costos
                             </h4>
                             <div className="space-y-4">
-                                {[
-                                    { label: 'Fijos', color: 'bg-emerald-500', val: 70 },
-                                    { label: 'Variables', color: 'bg-blue-500', val: 20 },
-                                    { label: 'Deuda', color: 'bg-orange-500', val: 10 }
-                                ].map(item => (
+                                {chartData.length > 0 ? chartData.map(item => (
                                     <div key={item.label} className="space-y-1.5">
                                         <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                                            <span>{item.label}</span>
+                                            <span className="truncate pr-2">{item.label}</span>
                                             <span>{item.val}%</span>
                                         </div>
                                         <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                                             <div className={cn("h-full rounded-full transition-all duration-1000", item.color)} style={{ width: `${item.val}%` }}></div>
                                         </div>
                                     </div>
-                                ))}
+                                )) : (
+                                    <p className="text-xs text-muted-foreground italic text-center py-4">Sin datos de categorías</p>
+                                )}
                             </div>
                         </div>
                     </div>

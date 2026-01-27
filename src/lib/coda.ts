@@ -318,6 +318,7 @@ export interface FinanceItem {
     amount: number;
     status: string; // '⏳ Pendiente', '✅ Pagado', '❌ Vencido'
     receipt: string;
+    category?: string;
 }
 
 export async function getFinanceProjections(docId?: string, apiToken?: string): Promise<FinanceItem[]> {
@@ -360,7 +361,8 @@ export async function getFinanceProjections(docId?: string, apiToken?: string): 
                 date: val["Fecha de Pago"] || new Date().toISOString(),
                 amount: safeNumber(val["Monto"]),
                 status: val["Estado"] || "⏳ Pendiente",
-                receipt: val["Comprobante"] || ""
+                receipt: val["Comprobante"] || "",
+                category: val["Categoría"] || ""
             };
         });
 
@@ -377,6 +379,7 @@ export interface FinanceRule {
     recurrence: string; // 'Mensual', 'Bimestral', etc.
     day: number;
     active: boolean;
+    category?: string;
 }
 
 export async function getFinanceRules(docId?: string, apiToken?: string): Promise<FinanceRule[]> {
@@ -407,7 +410,8 @@ export async function getFinanceRules(docId?: string, apiToken?: string): Promis
                 amount: safeNumber(val["Monto Base"] || val["Monto"]),
                 recurrence: val["Tipo Recurrencia"] || "Unknown",
                 day: safeNumber(val["Día de Corte"] || val["Día"] || val["Day"]),
-                active: val["Estado"] === "Activo"
+                active: val["Estado"] === "Activo",
+                category: val["Categoría"] || ""
             };
         });
     } catch (error) {
