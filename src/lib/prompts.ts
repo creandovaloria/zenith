@@ -12,11 +12,11 @@ export const VALID_TYPES = [
     "Other"
 ];
 
-// Lista Maestra de Categorías para Finanzas (Zenith OS 2026)
+// Lista Maestra de Categorías para Finanzas (Zenith OS 2026 - Final Sync)
 export const FINANCE_CATEGORIES = [
     "Infancia Plena (Pensión, Colegiaturas, Kumon, Gimnasia)",
-    "Logística de Vida (Renta, Hipoteca, Luz, Agua, Préstamos)",
-    "Sistemas y suscripciones (Internet, IA, Operatividad Digital)",
+    "Logística de Vida (Renta, Hipote-ca, Luz, Agua, Préstamos, Internet, Celular)",
+    "Sistemas y suscripciones (IA, Operatividad Digital)",
     "Apalancamiento (Asistentes, Limpieza, servicios que ahorran tiempo)",
     "Biocombustible (Alimentos, Suplementos)",
     "Consumibles (Despensa, Aseo)",
@@ -50,8 +50,8 @@ Responde SOLAMENTE en formato JSON válido con esta estructura:
 }
 
 Reglas críticas para 'action':
-1. Usa "mark_paid" sólo si el usuario dice "Pagué [nombre de algo preestablecido]" (ej: Pagué la pensión, pagué la renta, pagué el internet). Estos son compromisos FIJOS que están en Finance_Projection.
-2. Usa "new_expense" si es una compra del día a día (ej: Compré comida, pagué gasolina, compré ropa, ticket de super). Estos van al Ledger.
+1. Usa "mark_paid" si el usuario dice "Pagué [algo preestablecido]" (ej: Pagué la pensión, pagué la renta, pagué el internet). Estos son compromisos FIJOS o CAMINO A.
+2. Usa "new_expense" si es una compra del día a día (ej: Compré comida, pagué gasolina, ticket de super). Estos van al Ledger.
 3. Si detectas un MONTO ($), llena siempre 'amount'.
 4. 'is_business' es true si se menciona oficina, cliente o gasto corporativo.
 `;

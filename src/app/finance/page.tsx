@@ -63,25 +63,56 @@ export default async function FinancePage() {
         };
     });
 
-    // Budget Tracking Logic (The "Pro" feature)
+    // --- HYBRID LOGIC: FIXED VS VARIABLE ---
+    const fixedKeywords = [
+        "Infancia Plena",
+        "Logística de Vida",
+        "Fondo de Libertad",
+        "Donación / Legacy"
+    ];
+
     const currentMonthLedger = ledger.filter((l: LedgerEntry) => {
         const d = new Date(l.date || "");
         return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
     });
 
     const budgetStatus = budgets.map(b => {
-        const spent = currentMonthLedger
-            .filter((l: LedgerEntry) => l.category === b.category)
-            .reduce((acc: number, l: LedgerEntry) => acc + l.amount, 0);
+        const isFixed = fixedKeywords.some(kw => b.category.includes(kw));
 
-        const percent = b.monthlyBudget > 0 ? (spent / b.monthlyBudget) * 100 : 0;
+        let spent = 0;
+        let limit = b.monthlyBudget;
+        let percent = 0;
+        let color = 'bg-emerald-500';
+
+        if (isFixed) {
+            // FIXED LOGIC: Base on Projections
+            const catItems = currentMonthItems.filter(item => item.category === b.category);
+            const totalCat = catItems.reduce((acc, item) => acc + item.amount, 0);
+            const paidCat = catItems
+                .filter(item => item.status === "✅ Pagado" || item.status === "Pagado")
+                .reduce((acc, item) => acc + item.amount, 0);
+
+            spent = paidCat;
+            limit = totalCat || b.monthlyBudget;
+            percent = limit > 0 ? (spent / limit) * 100 : 0;
+            color = percent === 100 ? 'bg-emerald-500' : 'bg-primary/60';
+        } else {
+            // VARIABLE LOGIC: Base on Ledger vs Budget Table
+            spent = currentMonthLedger
+                .filter((l: LedgerEntry) => l.category === b.category)
+                .reduce((acc: number, l: LedgerEntry) => acc + l.amount, 0);
+
+            percent = limit > 0 ? (spent / limit) * 100 : 0;
+            color = percent > 95 ? 'bg-red-500' : percent > 75 ? 'bg-orange-500' : 'bg-emerald-500';
+        }
 
         return {
             category: b.category,
-            limit: b.monthlyBudget,
+            limit,
             spent,
             percent: Math.min(percent, 100),
-            color: percent > 95 ? 'bg-red-500' : percent > 75 ? 'bg-orange-500' : 'bg-emerald-500'
+            color,
+            isFixed
         };
     });
 
@@ -186,7 +217,10 @@ export default async function FinancePage() {
                                 {budgetStatus.length > 0 ? budgetStatus.map(item => (
                                     <div key={item.category} className="space-y-2">
                                         <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                                            <span className="truncate pr-2 max-w-[150px]">{item.category}</span>
+                                            <span className="truncate pr-2 max-w-[150px]">
+                                                {item.category}
+                                                {item.isFixed && <span className="ml-2 text-[8px] bg-primary/20 text-primary px-1 rounded">Fijo</span>}
+                                            </span>
                                             <span>${item.spent.toLocaleString()} / ${item.limit.toLocaleString()}</span>
                                         </div>
                                         <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">

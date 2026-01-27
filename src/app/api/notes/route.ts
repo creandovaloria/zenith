@@ -13,7 +13,7 @@ import { SYSTEM_PROMPT_PM } from '@/lib/prompts';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        let { text, type, title, summary, category, project } = body;
+        let { text, type, title, summary, category, project, receiptUrl } = body;
 
         if (!text) {
             return NextResponse.json({ error: 'Missing "text" field' }, { status: 400 });
@@ -83,7 +83,8 @@ export async function POST(request: Request) {
                     concept: concept || title,
                     amount: amount,
                     category: financeCategory,
-                    paymentMethod: "Voz / Zenith AI"
+                    paymentMethod: "Voz / Zenith AI",
+                    receiptUrl: receiptUrl
                 });
 
                 return NextResponse.json({

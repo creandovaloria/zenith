@@ -466,6 +466,7 @@ export interface LedgerEntry {
     category: string;
     date?: string; // ISO
     paymentMethod?: string;
+    receiptUrl?: string;
 }
 
 export async function createLedgerEntry(entry: LedgerEntry, docId?: string, apiToken?: string) {
@@ -486,7 +487,8 @@ export async function createLedgerEntry(entry: LedgerEntry, docId?: string, apiT
                         { column: "Monto", value: entry.amount },
                         { column: "Categoría", value: entry.category },
                         { column: "Fecha", value: entry.date || new Date().toISOString() },
-                        { column: "Método de Pago", value: entry.paymentMethod || "Efectivo" }
+                        { column: "Método de Pago", value: entry.paymentMethod || "Efectivo" },
+                        { column: "Comprobante", value: entry.receiptUrl || "" }
                     ]
                 }
             ]
