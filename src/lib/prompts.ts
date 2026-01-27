@@ -1,3 +1,4 @@
+
 // Puedes editar esta lista para agregar nuevos tipos de eventos
 export const VALID_TYPES = [
     "Meeting (Reuniones normales)",
@@ -11,18 +12,23 @@ export const VALID_TYPES = [
     "Other"
 ];
 
-// Lista Maestra de Categorías para Finanzas
+// Lista Maestra de Categorías para Finanzas (Zenith OS 2026)
 export const FINANCE_CATEGORIES = [
-    "Infancia Plena (Pensión, Colegiaturas, Kumon, Gimnasia, Uniformes)",
-    "Hogar & Servicios (Renta, Luz, Agua, Gas, Internet)",
-    "Biocombustible (Gasolina, Carga Eléctrica)",
-    "Logística & Transporte (Tag, Uber, Peajes, Talleres, Seguro Auto)",
-    "Consumibles (Super) (Despensa, Aseo, Farmacia)",
-    "Ocio & Estilo de Vida (Restaurantes, Cine, Cafés, Salidas)",
-    "Inversión Personal (Terapia, Mentoría, Salud, Gym Personal)",
-    "Compromisos & Deudas (Tarjetas, Cuotas, MSI, Impuestos)",
-    "Negocio (Herramientas, Software, Publicidad, Outsourcing)",
-    "Social & Otros (Regalos, Propinas, Imprevistos)"
+    "Infancia Plena (Pensión, Colegiaturas, Kumon, Gimnasia)",
+    "Logística de Vida (Renta, Hipoteca, Luz, Agua, Préstamos)",
+    "Sistemas y suscripciones (Internet, IA, Operatividad Digital)",
+    "Apalancamiento (Asistentes, Limpieza, servicios que ahorran tiempo)",
+    "Biocombustible (Alimentos, Suplementos)",
+    "Consumibles (Despensa, Aseo)",
+    "Ocio y Estilo de vida (Diversion, salidas, experiencias)",
+    "Expansión (Viajes, actividades fuera de lo cotidiano)",
+    "Social (Regalos para compromisos, eventos)",
+    "Imprevistos (Emergencias, reparaciones)",
+    "Movilidad (Gasolina, Uber, Mantenimiento del auto)",
+    "Inversión Personal Presencia (Cursos, Mentoría, Salud)",
+    "Inversión Personal Visible (Ropa, estética)",
+    "Fondo de Libertad (Ahorro, Inversión Patrimonial, págate a ti mismo primero)",
+    "Donación / Legacy (Filantropía, apoyo a otros, impacto externo)"
 ];
 
 export const SYSTEM_PROMPT_PM = `Actúa como un Project Manager y CFO Estratega (Zenith).
@@ -30,22 +36,22 @@ Tu objetivo es analizar transcripciones para extraer valor de negocio, acción y
 
 Responde SOLAMENTE en formato JSON válido con esta estructura:
 {
-    "suggested_title": "Título corto y descriptivo (3-6 palabras), ej: 'Pago Colegiatura abril' o 'Cena con Cliente'",
-    "final_type": "Uno de: ${VALID_TYPES.join(', ')}",
-    "summary_content": "Resumen ejecutivo. Si es reunión: Riesgos, Acuerdos, Pasos. Si es Gasto: Justificación y detalles.",
+    "suggested_title": "Título corto y descriptivo (3-6 palabras)",
+    "final_type": "Meeting, Webinar, Idea, Workshop, Interview, Journal, Expense, Payment, Other",
+    "summary_content": "Resumen ejecutivo limpio. Si es un gasto, menciona qué se compró.",
     "finance_details": {
         "is_finance": true/false,
         "amount": 0.00,
-        "currency": "MXN",
-        "concept": "Concepto del gasto",
-        "category": "Una de: ${FINANCE_CATEGORIES.join(', ')}",
+        "concept": "Concepto extraído",
+        "category": "ELEGIR LA QUE MEJOR AJUSTE DE LA LISTA: ${FINANCE_CATEGORIES.join(' | ')}",
+        "action": "mark_paid" O "new_expense",
         "is_business": true/false
     }
 }
 
-Reglas:
-1. Sé directo y ejecutivo.
-2. Si detectas un MONTO de dinero, clasifícalo como 'Expense' o 'Payment' y llena 'finance_details'.
-3. 'is_business' es true si se menciona cliente, factura, oficina o proyecto. False si es personal/hija/casa.
-4. El título debe ser claro.
+Reglas críticas para 'action':
+1. Usa "mark_paid" sólo si el usuario dice "Pagué [nombre de algo preestablecido]" (ej: Pagué la pensión, pagué la renta, pagué el internet). Estos son compromisos FIJOS que están en Finance_Projection.
+2. Usa "new_expense" si es una compra del día a día (ej: Compré comida, pagué gasolina, compré ropa, ticket de super). Estos van al Ledger.
+3. Si detectas un MONTO ($), llena siempre 'amount'.
+4. 'is_business' es true si se menciona oficina, cliente o gasto corporativo.
 `;

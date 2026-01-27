@@ -14,16 +14,18 @@ import {
     Plus
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getFinanceProjections, getFinanceRules } from "@/lib/coda";
+import { getFinanceProjections, getFinanceRules, getFinanceBudgets, getFinanceLedger, LedgerEntry } from "@/lib/coda";
 import { MarkPaidButton } from "@/components/MarkPaidButton";
 
 export default async function FinancePage() {
     const currentDate = new Date();
     const currentMonthName = format(currentDate, "MMMM", { locale: es });
 
-    const [projections, rules] = await Promise.all([
+    const [projections, rules, budgets, ledger] = await Promise.all([
         getFinanceProjections(),
-        getFinanceRules()
+        getFinanceRules(),
+        getFinanceBudgets(),
+        getFinanceLedger()
     ]);
 
     const currentMonthItems = projections.filter(item => {
@@ -58,6 +60,28 @@ export default async function FinancePage() {
             label,
             val: totalRulesAmount > 0 ? Math.round((val / totalRulesAmount) * 100) : 0,
             color: colors[idx % colors.length]
+        };
+    });
+
+    // Budget Tracking Logic (The "Pro" feature)
+    const currentMonthLedger = ledger.filter((l: LedgerEntry) => {
+        const d = new Date(l.date || "");
+        return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
+    });
+
+    const budgetStatus = budgets.map(b => {
+        const spent = currentMonthLedger
+            .filter((l: LedgerEntry) => l.category === b.category)
+            .reduce((acc: number, l: LedgerEntry) => acc + l.amount, 0);
+
+        const percent = b.monthlyBudget > 0 ? (spent / b.monthlyBudget) * 100 : 0;
+
+        return {
+            category: b.category,
+            limit: b.monthlyBudget,
+            spent,
+            percent: Math.min(percent, 100),
+            color: percent > 95 ? 'bg-red-500' : percent > 75 ? 'bg-orange-500' : 'bg-emerald-500'
         };
     });
 
@@ -156,21 +180,24 @@ export default async function FinancePage() {
                         <div className="p-6 rounded-3xl border border-border bg-gradient-to-br from-card to-muted/30">
                             <h4 className="font-bold text-sm mb-4 flex items-center gap-2">
                                 <PieChart className="w-4 h-4 text-violet-500" />
-                                Distribución de Costos
+                                Presupuestos Variables
                             </h4>
-                            <div className="space-y-4">
-                                {chartData.length > 0 ? chartData.map(item => (
-                                    <div key={item.label} className="space-y-1.5">
+                            <div className="space-y-5">
+                                {budgetStatus.length > 0 ? budgetStatus.map(item => (
+                                    <div key={item.category} className="space-y-2">
                                         <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                                            <span className="truncate pr-2">{item.label}</span>
-                                            <span>{item.val}%</span>
+                                            <span className="truncate pr-2 max-w-[150px]">{item.category}</span>
+                                            <span>${item.spent.toLocaleString()} / ${item.limit.toLocaleString()}</span>
                                         </div>
-                                        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                                            <div className={cn("h-full rounded-full transition-all duration-1000", item.color)} style={{ width: `${item.val}%` }}></div>
+                                        <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                                            <div
+                                                className={cn("h-full rounded-full transition-all duration-1000", item.color)}
+                                                style={{ width: `${item.percent}%` }}
+                                            ></div>
                                         </div>
                                     </div>
                                 )) : (
-                                    <p className="text-xs text-muted-foreground italic text-center py-4">Sin datos de categorías</p>
+                                    <p className="text-xs text-muted-foreground italic text-center py-4">Sin presupuestos activos</p>
                                 )}
                             </div>
                         </div>

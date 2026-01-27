@@ -460,5 +460,121 @@ export async function updateFinanceStatus(rowId: string, status: string = "✅ P
     }
 }
 
+export interface LedgerEntry {
+    concept: string;
+    amount: number;
+    category: string;
+    date?: string; // ISO
+    paymentMethod?: string;
+}
+
+export async function createLedgerEntry(entry: LedgerEntry, docId?: string, apiToken?: string) {
+    const targetDocId = docId || process.env.CODA_DOC_ID_FINANCE_CORE || process.env.CODA_DOC_ID_SUBSCRIPTIONS || process.env.CODA_DOC_ID;
+    const token = apiToken || CODA_API_TOKEN;
+
+    if (!token || !targetDocId) return false;
+
+    try {
+        const tableName = "Finance_Ledger";
+        const url = `https://coda.io/apis/v1/docs/${targetDocId}/tables/${tableName}/rows`;
+
+        const payload = {
+            rows: [
+                {
+                    cells: [
+                        { column: "Concepto", value: entry.concept },
+                        { column: "Monto", value: entry.amount },
+                        { column: "Categoría", value: entry.category },
+                        { column: "Fecha", value: entry.date || new Date().toISOString() },
+                        { column: "Método de Pago", value: entry.paymentMethod || "Efectivo" }
+                    ]
+                }
+            ]
+        };
+
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+            const err = await res.text();
+            console.error("Error creating Ledger row:", res.status, err);
+            return false;
+        }
+
+        return true;
+    } catch (error) {
+        console.error("Error in createLedgerEntry:", error);
+        return false;
+    }
+}
+
+export interface FinanceBudget {
+    category: string;
+    monthlyBudget: number;
+}
+
+export async function getFinanceBudgets(docId?: string, apiToken?: string): Promise<FinanceBudget[]> {
+    const targetDocId = docId || process.env.CODA_DOC_ID_FINANCE_CORE;
+    if (!CODA_API_TOKEN || !targetDocId) return [];
+
+    try {
+        const tableName = "Finance_Budgets";
+        const url = `https://coda.io/apis/v1/docs/${targetDocId}/tables/${tableName}/rows?useColumnNames=true&limit=100`;
+
+        const res = await fetch(url, {
+            headers: { Authorization: `Bearer ${CODA_API_TOKEN}` },
+            next: { revalidate: 3600 },
+        });
+
+        if (!res.ok) return [];
+
+        const data = await res.json();
+        return (data.items || []).map((row: any) => ({
+            category: row.values["Categoría"] || row.name,
+            monthlyBudget: safeNumber(row.values["Presupuesto Mensual"])
+        }));
+    } catch (error) {
+        console.error("Error fetching budgets:", error);
+        return [];
+    }
+}
+
+export async function getFinanceLedger(docId?: string, apiToken?: string) {
+    const targetDocId = docId || process.env.CODA_DOC_ID_FINANCE_CORE;
+    if (!CODA_API_TOKEN || !targetDocId) return [];
+
+    try {
+        const tableName = "Finance_Ledger";
+        const url = `https://coda.io/apis/v1/docs/${targetDocId}/tables/${tableName}/rows?useColumnNames=true&limit=500`;
+
+        const res = await fetch(url, {
+            headers: { Authorization: `Bearer ${CODA_API_TOKEN}` },
+            next: { revalidate: 300 }, // 5 min cache
+        });
+
+        if (!res.ok) return [];
+
+        const data = await res.json();
+        return (data.items || []).map((row: any) => ({
+            id: row.id,
+            concept: row.values["Concepto"] || row.name,
+            amount: safeNumber(row.values["Monto"]),
+            category: row.values["Categoría"] || "",
+            date: row.values["Fecha"] || new Date().toISOString()
+        }));
+    } catch (error) {
+        console.error("Error fetching ledger:", error);
+        return [];
+    }
+}
+
+
+
 
 
