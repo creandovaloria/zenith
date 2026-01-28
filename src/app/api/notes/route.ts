@@ -64,7 +64,7 @@ export async function POST(request: Request) {
 
                 if (target) {
                     console.log(`🎯 Smart Match Found: ${target.concept}. Updating in Coda...`);
-                    await updateFinanceStatus(target.id, "✅ Pagado", { receiptUrl, notes: summary });
+                    await updateFinanceStatus(target.id, "✅ Pagado", { receiptUrl, notes: summary, title });
                     return NextResponse.json({
                         success: true,
                         message: `Marcado como pagado: ${target.concept}`,

@@ -456,7 +456,7 @@ export async function getFinanceRules(docId?: string, apiToken?: string): Promis
     }
 }
 
-export async function updateFinanceStatus(rowId: string, status: string = "✅ Pagado", extra?: { receiptUrl?: string, notes?: string }, docId?: string, apiToken?: string): Promise<boolean> {
+export async function updateFinanceStatus(rowId: string, status: string = "✅ Pagado", extra?: { receiptUrl?: string, notes?: string, title?: string }, docId?: string, apiToken?: string): Promise<boolean> {
     const targetDocId = docId || process.env.CODA_DOC_ID_FINANCE_CORE || process.env.CODA_DOC_ID_SUBSCRIPTIONS || process.env.CODA_DOC_ID;
     const token = apiToken || CODA_API_TOKEN;
 
@@ -471,7 +471,8 @@ export async function updateFinanceStatus(rowId: string, status: string = "✅ P
                 cells: [
                     { column: "Estado", value: status },
                     { column: "Comprobante", value: extra?.receiptUrl || "" },
-                    { column: "Notas", value: extra?.notes || "" }
+                    { column: "Resumen de la IA", value: extra?.notes || "" },
+                    { column: "Concepto Corto", value: extra?.title || "" }
                 ].filter(c => c.value !== "" || c.column === "Estado")
             }
         };
@@ -528,7 +529,7 @@ export async function createLedgerEntry(entry: LedgerEntry, docId?: string, apiT
                         { column: "Fecha", value: entry.date || new Date().toISOString() },
                         { column: "Método de Pago", value: entry.paymentMethod || "Efectivo" },
                         { column: "Comprobante", value: entry.receiptUrl || "" },
-                        { column: "Notas", value: entry.notes || "" }
+                        { column: "Resumen de la IA", value: entry.notes || "" }
                     ]
                 }
             ]
