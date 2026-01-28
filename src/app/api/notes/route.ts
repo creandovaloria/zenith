@@ -13,11 +13,19 @@ import { SYSTEM_PROMPT_PM } from '@/lib/prompts';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        let { text, type, title, summary, category, project, receiptUrl } = body;
+        // Support both 'text' and 'Text' because iOS Shortcuts can be inconsistent
+        let { text, Text, type, title, summary, category, project, receiptUrl } = body;
+        const finalWeightText = text || Text;
 
-        if (!text) return NextResponse.json({ error: 'Missing "text" field' }, { status: 400 });
+        if (!finalWeightText) {
+            return NextResponse.json({
+                error: 'Missing "text" field',
+                receivedBody: body,
+                hint: "Asegúrate de que el Atajo pase la variable 'Texto transcrito' al campo 'text' del JSON."
+            }, { status: 400 });
+        }
 
-        // --- AI INTELIGENCE LAYER (Zenith Brain) ---
+        const rawTextToProcess = finalWeightText;
         let aiFinanceDetails = null;
 
         try {
@@ -25,7 +33,7 @@ export async function POST(request: Request) {
             const completion = await openai.chat.completions.create({
                 messages: [
                     { role: "system", content: SYSTEM_PROMPT_PM },
-                    { role: "user", content: `Transcripción: ${text}` }
+                    { role: "user", content: `Transcripción: ${rawTextToProcess}` }
                 ],
                 model: "gpt-4o",
                 response_format: { type: "json_object" },
@@ -41,13 +49,13 @@ export async function POST(request: Request) {
                 if (aiResponse.summary_content) summary = aiResponse.summary_content;
 
                 // --- SUPER FORCE FINANCE DETECTION ---
-                const normalizedText = text.toLowerCase();
-                const hasAmount = /\d+/.test(text);
+                const normalizedText = rawTextToProcess.toLowerCase();
+                const hasAmount = /\d+/.test(rawTextToProcess);
                 const hasKeywords = normalizedText.includes("$") || normalizedText.includes("pesos") || normalizedText.includes("gaste") || normalizedText.includes("pague") || normalizedText.includes("compre") || normalizedText.includes("ticket") || normalizedText.includes("pago") || normalizedText.includes("compra") || normalizedText.includes("registrar");
 
                 if (aiResponse.finance_details?.is_finance || hasKeywords || (type === "Expense" && hasAmount)) {
                     // Cleaner number extraction (handles 12,000 -> 12000)
-                    const rawAmount = text.replace(/,/g, '').match(/\d+(\.\d+)?/)?.[0] || "0";
+                    const rawAmount = rawTextToProcess.replace(/,/g, '').match(/\d+(\.\d+)?/)?.[0] || "0";
 
                     aiFinanceDetails = aiResponse.finance_details || {
                         is_finance: true,
@@ -92,7 +100,7 @@ export async function POST(request: Request) {
                 category: financeCategory || "Imprevistos",
                 paymentMethod: "Voz / Zenith AI",
                 receiptUrl: receiptUrl,
-                notes: summary || text
+                notes: summary || rawTextToProcess
             });
 
             if (ok) {
@@ -105,7 +113,7 @@ export async function POST(request: Request) {
         // --- Fallback if no finance detected ---
         return NextResponse.json({
             success: false,
-            message: `⚠️ Zenith no detectó esto como un gasto. ¿Olvidaste mencionar el monto? Recibí: "${text}"`,
+            message: `⚠️ Zenith no detectó esto como un gasto. ¿Olvidaste mencionar el monto? Recibí: "${rawTextToProcess}"`,
             action: "none"
         }, { status: 200 }); // Return 200 so Shortcut doesn't crash
 
