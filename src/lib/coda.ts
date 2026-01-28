@@ -355,16 +355,25 @@ export async function getFinanceProjections(docId?: string, apiToken?: string): 
         return rows.map((row: any) => {
             const val = row.values;
 
-            // SUPER ROBUST CONCEPT MATCHING
+            // Helper to extract string from potential Coda relation objects
+            const resolveV = (v: any) => {
+                if (!v) return null;
+                if (typeof v === 'string') return v;
+                if (typeof v === 'object') return v.name || v.id || JSON.stringify(v);
+                return String(v);
+            };
+
             const keys = Object.keys(val);
             const conceptKey = keys.find(k => {
                 const normalized = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
                 return normalized === "concepto" || normalized === "nombre" || normalized === "name" || normalized === "id gasto";
             });
 
+            const conceptValue = resolveV(conceptKey ? val[conceptKey] : null);
+
             return {
                 id: row.id,
-                concept: (conceptKey ? val[conceptKey] : null) || row.name || "Sin Concepto",
+                concept: row.name || conceptValue || "Sin Concepto",
                 date: val["Fecha de Pago"] || new Date().toISOString(),
                 amount: safeNumber(val["Monto"]),
                 status: val["Estado"] || "⏳ Pendiente",
@@ -413,15 +422,23 @@ export async function getFinanceRules(docId?: string, apiToken?: string): Promis
 
         return rows.map((row: any) => {
             const val = row.values;
+            const resolveV = (v: any) => {
+                if (!v) return null;
+                if (typeof v === 'string') return v;
+                if (typeof v === 'object') return v.name || v.id || JSON.stringify(v);
+                return String(v);
+            };
             const keys = Object.keys(val);
             const conceptKey = keys.find(k => {
                 const n = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
                 return n === "concepto" || n === "nombre" || n === "name";
             });
 
+            const conceptValue = resolveV(conceptKey ? val[conceptKey] : null);
+
             return {
                 id: row.id,
-                name: (conceptKey ? val[conceptKey] : null) || row.name || "Sin Nombre",
+                name: row.name || conceptValue || "Sin Nombre",
                 amount: safeNumber(val["Monto Base"] || val["Monto"]),
                 recurrence: val["Tipo Recurrencia"] || "Unknown",
                 day: safeNumber(val["Día de Corte"] || val["Día"] || val["Day"]),
@@ -588,15 +605,23 @@ export async function getFinanceLedger(docId?: string, apiToken?: string) {
         const data = await res.json();
         return (data.items || []).map((row: any) => {
             const val = row.values;
+            const resolveV = (v: any) => {
+                if (!v) return null;
+                if (typeof v === 'string') return v;
+                if (typeof v === 'object') return v.name || v.id || JSON.stringify(v);
+                return String(v);
+            };
             const keys = Object.keys(val);
             const conceptKey = keys.find(k => {
                 const n = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
                 return n === "concepto" || n === "nombre" || n === "name";
             });
 
+            const conceptValue = resolveV(conceptKey ? val[conceptKey] : null);
+
             return {
                 id: row.id,
-                concept: (conceptKey ? val[conceptKey] : null) || row.name || "Sin Concepto",
+                concept: row.name || conceptValue || "Sin Concepto",
                 amount: safeNumber(val["Monto"]),
                 category: val["Categoría"] || "",
                 date: val["Fecha"] || new Date().toISOString()
