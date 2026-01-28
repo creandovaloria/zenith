@@ -339,7 +339,7 @@ export async function getFinanceProjections(docId?: string, apiToken?: string): 
 
         const res = await fetch(url, {
             headers: { Authorization: `Bearer ${token}` },
-            next: { revalidate: 300 }, // Cache for 5 mins
+            next: { revalidate: 0 }, // Force fresh data
         });
 
         if (!res.ok) {
@@ -354,10 +354,17 @@ export async function getFinanceProjections(docId?: string, apiToken?: string): 
 
         return rows.map((row: any) => {
             const val = row.values;
-            // Use safe defaults
+
+            // SUPER ROBUST CONCEPT MATCHING
+            const keys = Object.keys(val);
+            const conceptKey = keys.find(k => {
+                const normalized = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                return normalized === "concepto" || normalized === "nombre" || normalized === "name" || normalized === "id gasto";
+            });
+
             return {
                 id: row.id,
-                concept: val["Concepto"] || val["ID Gasto"] || val["Nombre"] || val["Name"] || row.name || "Sin Concepto",
+                concept: (conceptKey ? val[conceptKey] : null) || row.name || "Sin Concepto",
                 date: val["Fecha de Pago"] || new Date().toISOString(),
                 amount: safeNumber(val["Monto"]),
                 status: val["Estado"] || "⏳ Pendiente",
@@ -406,9 +413,15 @@ export async function getFinanceRules(docId?: string, apiToken?: string): Promis
 
         return rows.map((row: any) => {
             const val = row.values;
+            const keys = Object.keys(val);
+            const conceptKey = keys.find(k => {
+                const n = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                return n === "concepto" || n === "nombre" || n === "name";
+            });
+
             return {
                 id: row.id,
-                name: val["Nombre"] || row.name,
+                name: (conceptKey ? val[conceptKey] : null) || row.name || "Sin Nombre",
                 amount: safeNumber(val["Monto Base"] || val["Monto"]),
                 recurrence: val["Tipo Recurrencia"] || "Unknown",
                 day: safeNumber(val["Día de Corte"] || val["Día"] || val["Day"]),
@@ -541,10 +554,16 @@ export async function getFinanceBudgets(docId?: string, apiToken?: string): Prom
         if (!res.ok) return [];
 
         const data = await res.json();
-        return (data.items || []).map((row: any) => ({
-            category: row.values["Categoría"] || row.name,
-            monthlyBudget: safeNumber(row.values["Presupuesto Mensual"])
-        }));
+        return (data.items || []).map((row: any) => {
+            const val = row.values;
+            const keys = Object.keys(val);
+            const catKey = keys.find(k => k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === "categoria");
+
+            return {
+                category: (catKey ? val[catKey] : null) || row.name,
+                monthlyBudget: safeNumber(val["Presupuesto Mensual"])
+            };
+        });
     } catch (error) {
         console.error("Error fetching budgets:", error);
         return [];
@@ -567,13 +586,22 @@ export async function getFinanceLedger(docId?: string, apiToken?: string) {
         if (!res.ok) return [];
 
         const data = await res.json();
-        return (data.items || []).map((row: any) => ({
-            id: row.id,
-            concept: row.values["Concepto"] || row.name,
-            amount: safeNumber(row.values["Monto"]),
-            category: row.values["Categoría"] || "",
-            date: row.values["Fecha"] || new Date().toISOString()
-        }));
+        return (data.items || []).map((row: any) => {
+            const val = row.values;
+            const keys = Object.keys(val);
+            const conceptKey = keys.find(k => {
+                const n = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                return n === "concepto" || n === "nombre" || n === "name";
+            });
+
+            return {
+                id: row.id,
+                concept: (conceptKey ? val[conceptKey] : null) || row.name || "Sin Concepto",
+                amount: safeNumber(val["Monto"]),
+                category: val["Categoría"] || "",
+                date: val["Fecha"] || new Date().toISOString()
+            };
+        });
     } catch (error) {
         console.error("Error fetching ledger:", error);
         return [];

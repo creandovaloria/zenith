@@ -1,49 +1,33 @@
 
-const https = require('https');
+require('dotenv').config({ path: '.env.local' });
 
-// Configuración de Prueba
-const TOKEN = '9a6dfada-4161-41c5-9c5e-6ddd8487b9bd'; // Token Negocios
-const DOC_ID = 'BT9_NIJO55'; // ID del Doc de la URL (Probablemente el correcto)
+async function testCoda() {
+    const token = process.env.CODA_API_TOKEN;
+    const docId = process.env.CODA_DOC_ID_FINANCE_CORE;
+    const tableName = "Finance_Projection";
 
-// Funciones de ayuda
-function fetchCoda(url, label) {
-    const options = {
-        headers: { 'Authorization': `Bearer ${TOKEN}` }
-    };
+    if (!token || !docId) {
+        console.error("Missing ENV vars");
+        return;
+    }
 
-    console.log(`\n--- Probando: ${label} ---`);
-    console.log(`URL: ${url}`);
-
-    https.get(url, options, (res) => {
-        let data = '';
-        res.on('data', chunk => data += chunk);
-        res.on('end', () => {
-            if (res.statusCode !== 200) {
-                console.error(`❌ Error ${res.statusCode}: ${res.statusMessage}`);
-                // console.error(data); // Uncomment for full error
-                return;
-            }
-            try {
-                const json = JSON.parse(data);
-                console.log(`✅ Éxito. Items encontrados: ${json.items ? json.items.length : 0}`);
-                if (json.items && json.items.length > 0) {
-                    // console.log("Documentos (ID - Nombre):", JSON.stringify(json.items.map(i => `${i.id} - ${i.name}`), null, 2));
-                    console.log("Full Valid Item:", JSON.stringify(json.items[0], null, 2));
-                } else {
-                    console.log("⚠️ La lista está vacía.");
-                }
-            } catch (e) {
-                console.error("Error parseando JSON:", e.message);
-            }
+    try {
+        const url = `https://coda.io/apis/v1/docs/${docId}/tables/${tableName}/rows?useColumnNames=true&limit=2`;
+        const res = await fetch(url, {
+            headers: { Authorization: `Bearer ${token}` }
         });
-    }).on('error', e => console.error("Error de Red:", e.message));
+
+        console.log("Status:", res.status);
+        const data = await res.json();
+        if (data.items && data.items.length > 0) {
+            console.log("Column Names found in first row:", Object.keys(data.items[0].values));
+            console.log("Values in first row:", JSON.stringify(data.items[0].values, null, 2));
+        } else {
+            console.log("No items found in table.");
+        }
+    } catch (e) {
+        console.error("Error:", e.message);
+    }
 }
 
-// 1. Listar tablas del Doc de Negocios
-fetchCoda(`https://coda.io/apis/v1/docs/${DOC_ID}/tables`, "Listado de Tablas en el Doc");
-
-// 2. Intentar leer Suscripciones_Negocio (Comentado hasta saber el nombre)
-fetchCoda(`https://coda.io/apis/v1/docs/${DOC_ID}/tables/Suscripciones_Negocio/rows?limit=1`, "Lectura Tabla Negocio");
-
-// 3. Intentar leer Suscripciones_Negocio
-// fetchCoda(`https://coda.io/apis/v1/docs/${DOC_ID}/tables/Suscripciones_Negocio/rows?limit=1`, "Lectura Tabla Negocio");
+testCoda();
