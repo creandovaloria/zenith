@@ -31,11 +31,14 @@ export async function POST(request: NextRequest) {
         }
 
         // --- STEP 2: AI ENRICHMENT (SYNC) ---
+        const fixedKeywords = ["renta", "pago", "colegiatura", "celular", "internet", "luz", "agua", "gas", "netflix", "spotify", "suscripcion", "pension", "hipoteca"];
+        const isFixed = fixedKeywords.some(keyword => normalizedText.includes(keyword));
+
         let aiDetails: any = {
             amount: parseFloat(rawTextToProcess.replace(/,/g, '').match(/\d+(\.\d+)?/)?.[0] || "0"),
             summary: "Procesado sin resumen IA",
             category: "Imprevistos (Emergencias, reparaciones)", // Full Coda Name
-            isFixed: normalizedText.includes("renta") || normalizedText.includes("pago") || normalizedText.includes("colegiatura")
+            isFixed: isFixed
         };
 
         try {
