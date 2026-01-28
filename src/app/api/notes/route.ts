@@ -70,9 +70,16 @@ export async function POST(request: Request) {
             if (action === "mark_paid") {
                 const projections = await getFinanceProjections();
                 const pending = projections.filter(p => !p.status.includes("✅"));
-                const target = pending.find(p => p.concept.toLowerCase().includes(concept.toLowerCase()) || concept.toLowerCase().includes(p.concept.toLowerCase()));
+
+                // ULTRA FUZZY MATCH
+                const searchLower = concept.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const target = pending.find(p => {
+                    const conceptLower = p.concept.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    return conceptLower.includes(searchLower) || searchLower.includes(conceptLower);
+                });
 
                 if (target) {
+                    console.log(`🎯 Ultra-Match: ${target.concept}`);
                     const success = await updateFinanceStatus(target.id, "✅ Pagado", { receiptUrl, notes: summary, title });
                     if (success) return NextResponse.json({ success: true, message: `✅ Pagado: ${target.concept}`, action: "mark_paid" });
                 }
