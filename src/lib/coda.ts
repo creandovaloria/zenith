@@ -661,15 +661,24 @@ export async function createBulkProjections(rows: any[], docId?: string, apiToke
         const tableName = "Finance_Projection";
         const url = `https://coda.io/apis/v1/docs/${targetDocId}/tables/${tableName}/rows`;
 
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Normalize to start of day
+
         const payload = {
-            rows: rows.map(r => ({
-                cells: [
-                    { column: "Regla Vinculada", value: r.name }, // This creates the link in Coda
-                    { column: "Fecha de Pago", value: r.date },
-                    { column: "Monto", value: r.amount },
-                    { column: "Estado", value: "⏳ Pendiente" }
-                ]
-            }))
+            rows: rows.map(r => {
+                const paymentDate = new Date(r.date);
+                paymentDate.setHours(0, 0, 0, 0);
+                const isOverdue = paymentDate < today;
+
+                return {
+                    cells: [
+                        { column: "Regla Vinculada", value: r.name },
+                        { column: "Fecha de Pago", value: r.date },
+                        { column: "Monto", value: r.amount },
+                        { column: "Estado", value: isOverdue ? "❌ Vencido" : "⏳ Pendiente" }
+                    ]
+                };
+            })
         };
 
         const res = await fetch(url, {
