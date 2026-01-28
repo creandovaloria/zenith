@@ -142,11 +142,30 @@ export async function POST(request: NextRequest) {
                 }
             }
 
+            // Extraer identificadores numéricos del dictado (ej: "13K", "50K", "1300", "50000")
+            const numericIdentifiers: string[] = [];
+            // Match patterns like "13K", "50K", "13k", etc.
+            const kPattern = normalizedDictation.match(/\d+k/gi);
+            if (kPattern) numericIdentifiers.push(...kPattern.map(k => k.toLowerCase()));
+            // Match large numbers that could be identifiers (1000+)
+            const numPattern = normalizedDictation.match(/\d{4,}/g);
+            if (numPattern) numericIdentifiers.push(...numPattern);
+
+            console.log(`🔍 [MATCHING] Identificadores numéricos detectados: [${numericIdentifiers.join(", ")}]`);
+
             // Función para calcular score de coincidencia
-            const calculateMatchScore = (concept: string): number => {
+            const calculateMatchScore = (concept: string, amount: number): number => {
                 const normalizedConcept = normalize(concept);
                 const conceptWords = normalizedConcept.split(/\s+/);
                 let score = 0;
+
+                // PRIORIDAD MÁXIMA: Match de identificador numérico (ej: "13K" en dictado y "13K" en concepto)
+                for (const numId of numericIdentifiers) {
+                    if (normalizedConcept.includes(numId)) {
+                        score += 200; // Peso muy alto para identificadores específicos
+                        console.log(`🎯 [MATCHING] Match de identificador "${numId}" en "${concept}" (+200)`);
+                    }
+                }
 
                 // Match exacto = 100 puntos
                 if (normalizedDictation.includes(normalizedConcept) || normalizedConcept.includes(normalizedDictation)) {
@@ -169,6 +188,16 @@ export async function POST(request: NextRequest) {
                     }
                 }
 
+                // Bonus por cercanía de monto (si el monto dictado está cerca del monto de la proyección)
+                if (aiDetails.amount > 0 && amount > 0) {
+                    const ratio = aiDetails.amount / amount;
+                    // Si el monto dictado está entre 80% y 120% del monto esperado, dar bonus
+                    if (ratio >= 0.8 && ratio <= 1.2) {
+                        score += 30;
+                        console.log(`💰 [MATCHING] Monto cercano: dictado=${aiDetails.amount}, proyección=${amount} (+30)`);
+                    }
+                }
+
                 return score;
             };
 
@@ -178,7 +207,7 @@ export async function POST(request: NextRequest) {
                 .filter(p => !p.status.includes("✅"))
                 .map(p => ({
                     ...p,
-                    score: calculateMatchScore(p.concept),
+                    score: calculateMatchScore(p.concept, p.amount),
                     daysFromToday: Math.abs(Math.floor((new Date(p.date).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)))
                 }))
                 .filter(p => p.score > 0) // Solo proyecciones con algún match
