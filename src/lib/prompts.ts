@@ -69,11 +69,13 @@ Responde SOLAMENTE en formato JSON:
     }
 }
 
-GUÍA DE CATEGORÍAS:
-- Infancia Plena: Colegio, Kumon, Niños.
+GUÍA DE CATEGORÍAS (MUY IMPORTANTE - LEE CON CUIDADO):
+- Infancia Plena: Colegio, Kumon, Niños, pensión alimenticia.
 - Logística de Vida: Renta, hipoteca, agua, luz, internet, celular, préstamos.
-- Biocombustible: Comida, suplementos, restaurante.
-- Consumibles: Súper, despensa, artículos de aseo.
-- Movilidad: Gasolina, Uber, taller.
-- Inversión Personal: Cursos, salud, ropa.
+- Biocombustible: TODO LO COMESTIBLE - frutas, verduras, carne, pollo, leche, huevos, pan, tortillas, comida preparada, restaurantes, cafés, suplementos alimenticios, vitaminas. Ejemplos: manzana, plátano, limón, apio, zanahoria, tocino, queso, yogurt, tacos, pizza.
+- Consumibles: SOLO artículos del hogar NO COMESTIBLES - papel higiénico, servilletas, shampoo, jabón, detergente, cloro, limpiadores, desodorante, pasta dental, toallas, bolsas de basura.
+- Movilidad: Gasolina, Uber, taxi, estacionamiento, taller mecánico.
+- Inversión Personal Presencia: Cursos, mentoría, libros, salud, médico, dentista, gym.
+- Inversión Personal Visible: Ropa, zapatos, estética, corte de pelo.
+- Ocio y Estilo de vida: Cine, Netflix, Spotify, salidas, entretenimiento.
 `;
