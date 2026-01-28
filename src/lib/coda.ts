@@ -469,10 +469,10 @@ export async function updateFinanceStatus(rowId: string, status: string = "✅ P
             row: {
                 cells: [
                     { column: "Estado", value: status },
-                    { column: "Comprobante", value: extra?.receiptUrl || "" },
-                    { column: "Resumen de la IA", value: extra?.notes || "" },
-                    { column: "Concepto", value: extra?.title || "" }
-                ].filter(c => c.value !== "" || c.column === "Estado")
+                    { column: "Comprobante", value: extra?.receiptUrl },
+                    { column: "Resumen de la IA", value: extra?.notes },
+                    { column: "Concepto", value: extra?.title }
+                ].filter(c => c.value !== undefined && c.value !== null)
             }
         };
 
