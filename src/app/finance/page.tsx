@@ -1,6 +1,6 @@
 
 import React from "react";
-import { format } from "date-fns";
+import { format, addMonths, startOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import {
     CreditCard,
@@ -116,6 +116,36 @@ export default async function FinancePage() {
         };
     });
 
+    // --- RADAR: 12-MONTH FORECAST LOGIC ---
+    const forecast = Array.from({ length: 12 }).map((_, i) => {
+        const targetMonthDate = addMonths(startOfMonth(currentDate), i);
+        const m = targetMonthDate.getMonth() + 1;
+        const monthName = format(targetMonthDate, "MMM", { locale: es });
+
+        const monthlyTotal = rules.reduce((acc, rule) => {
+            if (!rule.active) return acc;
+
+            // Strict Month Validation
+            if (rule.startMonth && m < rule.startMonth) return acc;
+            if (rule.endMonth && m > rule.endMonth) return acc;
+
+            // Recurrence Logic
+            let applies = false;
+            const rec = rule.recurrence;
+            if (rec === "Mensual") applies = true;
+            else if (rec === "Bimestral Par") applies = (m % 2 === 0);
+            else if (rec === "Bimestral Non") applies = (m % 2 !== 0);
+            else if (rec === "Rango Definido") applies = true;
+            else if (rec === "Único") applies = (m === rule.startMonth);
+
+            return applies ? acc + rule.amount : acc;
+        }, 0);
+
+        return { monthName, total: monthlyTotal };
+    });
+
+    const maxForecast = Math.max(...forecast.map(f => f.total), 1);
+
     return (
         <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/30">
             {/* Header */}
@@ -177,6 +207,47 @@ export default async function FinancePage() {
                             <h2 className="text-3xl font-bold text-orange-500">${pendingMonthly.toLocaleString('es-MX')}</h2>
                             <p className="text-sm text-muted-foreground">Flujo necesario para cubrir</p>
                         </div>
+                    </div>
+                </section>
+
+                {/* Radar Area: Long-term Forecast */}
+                <section className="glass-panel p-8 rounded-[2.5rem] border-white/5 bg-card/50 overflow-hidden relative">
+                    <div className="absolute top-0 right-0 p-20 bg-primary/5 blur-[100px] rounded-full -mr-10 -mt-10"></div>
+
+                    <div className="flex items-center justify-between mb-8 relative z-10">
+                        <div>
+                            <h3 className="text-xl font-bold flex items-center gap-2">
+                                <PieChart className="w-5 h-5 text-primary" />
+                                Radar de Proyección (12 Meses)
+                            </h3>
+                            <p className="text-sm text-muted-foreground">Flujos futuros basados en tus reglas maestras</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold uppercase text-muted-foreground">Vista estratégica</span>
+                        </div>
+                    </div>
+
+                    <div className="h-48 flex items-end justify-between gap-2 relative z-10 px-4">
+                        {forecast.map((f, i) => (
+                            <div key={i} className="flex-1 flex flex-col items-center group">
+                                <div className="hidden group-hover:flex absolute -top-10 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded shadow-xl transition-all">
+                                    ${f.total.toLocaleString()}
+                                </div>
+                                <div
+                                    className={cn(
+                                        "w-full rounded-t-lg transition-all duration-700 bg-primary/20 group-hover:bg-primary/50",
+                                        i === 0 && "bg-primary shadow-[0_0_20px_rgba(var(--primary),0.3)]"
+                                    )}
+                                    style={{ height: `${(f.total / maxForecast) * 100}%` }}
+                                ></div>
+                                <span className={cn(
+                                    "text-[10px] font-bold uppercase mt-4",
+                                    i === 0 ? "text-primary font-black" : "text-muted-foreground"
+                                )}>
+                                    {f.monthName}
+                                </span>
+                            </div>
+                        ))}
                     </div>
                 </section>
 
