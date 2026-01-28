@@ -34,11 +34,15 @@ export async function GET(req: NextRequest) {
         // 2. Identify which rows already exist for this month to avoid duplicates
         const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
-        const existingIdentifiers = new Set(projections.map(p => {
-            if (!p.date) return `${normalize(p.concept || '')}-unknown`;
+        const existingIdentifiers = new Set();
+        projections.forEach(p => {
+            if (!p.date || !p.concept) return;
             const pMonth = p.date.substring(0, 7); // "YYYY-MM"
-            return `${normalize(p.concept)}-${pMonth}`;
-        }));
+            const identifier = `${normalize(p.concept)}-${pMonth}`;
+            existingIdentifiers.add(identifier);
+            // Also store just the concept name to be safe
+            console.log(`📍 Found in Coda: ${identifier}`);
+        });
 
         console.log("📋 Existing identifiers in Coda:", Array.from(existingIdentifiers));
 
