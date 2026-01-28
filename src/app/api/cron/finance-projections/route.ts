@@ -38,6 +38,12 @@ export async function GET(req: NextRequest) {
         const newProjections = rules.filter(rule => {
             if (!rule.active) return false;
 
+            // --- STRICT MONTH VALIDATION ---
+            // If rule has a start month, it MUST be current month or earlier
+            if (rule.startMonth && currentMonth < rule.startMonth) return false;
+            // If rule has an end month, it MUST be current month or later
+            if (rule.endMonth && currentMonth > rule.endMonth) return false;
+
             // Recurrence Logic
             const rec = rule.recurrence;
             let applies = false;
@@ -49,13 +55,9 @@ export async function GET(req: NextRequest) {
             } else if (rec === "Bimestral Non") {
                 applies = (currentMonth % 2 !== 0);
             } else if (rec === "Rango Definido") {
-                if (rule.startMonth && rule.endMonth) {
-                    applies = (currentMonth >= rule.startMonth && currentMonth <= rule.endMonth);
-                }
+                applies = true; // Already covered by start/end month checks above
             } else if (rec === "Único") {
-                if (rule.startMonth) {
-                    applies = (currentMonth === rule.startMonth);
-                }
+                applies = (currentMonth === rule.startMonth);
             }
 
             if (!applies) return false;

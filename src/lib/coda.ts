@@ -653,11 +653,10 @@ export async function createBulkProjections(rows: any[], docId?: string, apiToke
         const payload = {
             rows: rows.map(r => ({
                 cells: [
-                    { column: "Concepto", value: r.name },
+                    { column: "Regla Vinculada", value: r.name }, // This creates the link in Coda
                     { column: "Fecha de Pago", value: r.date },
                     { column: "Monto", value: r.amount },
-                    { column: "Estado", value: "⏳ Pendiente" },
-                    { column: "Categoría", value: r.category }
+                    { column: "Estado", value: "⏳ Pendiente" }
                 ]
             }))
         };
