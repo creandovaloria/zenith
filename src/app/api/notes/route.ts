@@ -85,10 +85,25 @@ export async function POST(request: NextRequest) {
             const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             const normalizedDictation = normalize(rawTextToProcess);
 
+            // Palabras comunes a ignorar en el matching
+            const stopWords = ["pago", "pague", "pagar", "registrar", "de", "el", "la", "los", "las", "un", "una", "del", "al", "ya", "hoy", "ayer"];
+
+            // Extraer palabras clave significativas del dictado
+            const dictationWords = normalizedDictation.split(/\s+/).filter(word =>
+                word.length > 2 && !stopWords.includes(word)
+            );
+
             const target = projections.find(p => {
                 if (p.status.includes("✅")) return false;
                 const concept = normalize(p.concept);
-                return normalizedDictation.includes(concept) || concept.includes(normalizedDictation);
+                const conceptWords = concept.split(/\s+/);
+
+                // Match si: 1) el dictado contiene el concepto, 2) el concepto contiene el dictado,
+                // o 3) alguna palabra clave del dictado está en el concepto
+                return normalizedDictation.includes(concept) ||
+                    concept.includes(normalizedDictation) ||
+                    dictationWords.some(word => concept.includes(word)) ||
+                    conceptWords.some(cWord => dictationWords.includes(cWord));
             });
 
             if (target) {
