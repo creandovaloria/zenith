@@ -5,7 +5,27 @@ import {
     createLedgerEntry
 } from '@/lib/coda';
 import OpenAI from 'openai';
-import { SYSTEM_PROMPT_PM } from '@/lib/prompts';
+import { SYSTEM_PROMPT_PM, FINANCE_CATEGORIES } from '@/lib/prompts';
+
+// Función para normalizar categoría al nombre completo de Coda
+const normalizeCategory = (category: string): string => {
+    if (!category) return "Imprevistos (Emergencias, reparaciones)";
+
+    const normalizedInput = category.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+    // Buscar match exacto o por nombre corto
+    const match = FINANCE_CATEGORIES.find(fullCat => {
+        const normalizedFull = fullCat.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        // Match exacto
+        if (normalizedFull === normalizedInput) return true;
+        // Match por nombre corto (antes del paréntesis)
+        const shortName = fullCat.split("(")[0].trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        if (shortName === normalizedInput || normalizedInput.includes(shortName) || shortName.includes(normalizedInput)) return true;
+        return false;
+    });
+
+    return match || "Imprevistos (Emergencias, reparaciones)";
+};
 
 export async function POST(request: NextRequest) {
     try {
@@ -68,7 +88,7 @@ export async function POST(request: NextRequest) {
 
             if (aiRes.finance_details) {
                 if (aiRes.finance_details.amount) aiDetails.amount = aiRes.finance_details.amount;
-                if (aiRes.finance_details.category) aiDetails.category = aiRes.finance_details.category;
+                if (aiRes.finance_details.category) aiDetails.category = normalizeCategory(aiRes.finance_details.category);
             }
         } catch (e: any) {
             console.error("AI Error (Falling back to raw data):", e);
