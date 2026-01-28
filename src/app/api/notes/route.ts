@@ -64,7 +64,7 @@ export async function POST(request: Request) {
 
                 if (target) {
                     console.log(`🎯 Smart Match Found: ${target.concept}. Updating in Coda...`);
-                    await updateFinanceStatus(target.id, "✅ Pagado");
+                    await updateFinanceStatus(target.id, "✅ Pagado", { receiptUrl, notes: summary });
                     return NextResponse.json({
                         success: true,
                         message: `Marcado como pagado: ${target.concept}`,
@@ -84,7 +84,8 @@ export async function POST(request: Request) {
                     amount: amount,
                     category: financeCategory,
                     paymentMethod: "Voz / Zenith AI",
-                    receiptUrl: receiptUrl
+                    receiptUrl: receiptUrl,
+                    notes: summary
                 });
 
                 return NextResponse.json({
