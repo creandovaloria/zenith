@@ -15,9 +15,7 @@ export async function POST(request: Request) {
         const body = await request.json();
         let { text, type, title, summary, category, project, receiptUrl } = body;
 
-        if (!text) {
-            return NextResponse.json({ error: 'Missing "text" field' }, { status: 400 });
-        }
+        if (!text) return NextResponse.json({ error: 'Missing "text" field' }, { status: 400 });
 
         // --- AI INTELIGENCE LAYER (Zenith Brain) ---
         let aiFinanceDetails = null;
@@ -27,7 +25,7 @@ export async function POST(request: Request) {
             const completion = await openai.chat.completions.create({
                 messages: [
                     { role: "system", content: SYSTEM_PROMPT_PM },
-                    { role: "user", content: `Analiza esta Transcripción: ${text}` }
+                    { role: "user", content: `Transcripción: ${text}` }
                 ],
                 model: "gpt-4o",
                 response_format: { type: "json_object" },
@@ -42,98 +40,71 @@ export async function POST(request: Request) {
                 if (aiResponse.final_type) type = aiResponse.final_type;
                 if (aiResponse.summary_content) summary = aiResponse.summary_content;
 
-                // Force finance if keywords are present even if AI is unsure
-                const lowerText = text.toLowerCase();
-                const hasFinanceKeywords = lowerText.includes("$") || lowerText.includes("pesos") || lowerText.includes("gaste") || lowerText.includes("pague");
+                // --- SUPER FORCE FINANCE DETECTION ---
+                const normalizedText = text.toLowerCase();
+                const hasAmount = /\d+/.test(text);
+                const hasKeywords = normalizedText.includes("$") || normalizedText.includes("pesos") || normalizedText.includes("gaste") || normalizedText.includes("pague") || normalizedText.includes("compre") || normalizedText.includes("ticket");
 
-                if (aiResponse.finance_details?.is_finance || hasFinanceKeywords) {
+                if (aiResponse.finance_details?.is_finance || hasKeywords || (type === "Expense" && hasAmount)) {
                     aiFinanceDetails = aiResponse.finance_details || {
                         is_finance: true,
-                        amount: parseFloat(text.match(/\d+/)?.[0] || "0"),
-                        concept: title || "Gasto detectado",
+                        amount: parseFloat(text.match(/\d+(\.\d+)?/)?.[0] || "0"),
+                        concept: title || "Gasto Detectado",
                         category: "Imprevistos",
                         action: "new_expense"
                     };
                 }
             }
         } catch (aiError) {
-            console.error("OpenAI Error:", aiError);
+            console.error("AI Error:", aiError);
         }
 
-        // --- FINANCE LOGIC (The CFO Brain) ---
+        // --- FINANCE LOGIC ---
         if (aiFinanceDetails) {
             const { action, amount, concept, category: financeCategory } = aiFinanceDetails;
 
+            // 1. Try to Mark as Paid (Projections)
             if (action === "mark_paid") {
                 const projections = await getFinanceProjections();
-                const pending = projections.filter(p => p.status !== "✅ Pagado" && p.status !== "Pagado");
-
-                const target = pending.find(p =>
-                    p.concept.toLowerCase().includes(concept.toLowerCase()) ||
-                    concept.toLowerCase().includes(p.concept.toLowerCase())
-                );
+                const pending = projections.filter(p => !p.status.includes("✅"));
+                const target = pending.find(p => p.concept.toLowerCase().includes(concept.toLowerCase()) || concept.toLowerCase().includes(p.concept.toLowerCase()));
 
                 if (target) {
-                    console.log(`🎯 Smart Match Found: ${target.concept}. Updating in Coda...`);
-                    const ok = await updateFinanceStatus(target.id, "✅ Pagado", { receiptUrl, notes: summary, title });
-                    if (ok) {
-                        return NextResponse.json({
-                            success: true,
-                            message: `✅ Marcado como pagado: ${target.concept}`,
-                            action: "mark_paid"
-                        });
-                    }
+                    const success = await updateFinanceStatus(target.id, "✅ Pagado", { receiptUrl, notes: summary, title });
+                    if (success) return NextResponse.json({ success: true, message: `✅ Pagado: ${target.concept}`, action: "mark_paid" });
                 }
             }
 
-            // Create Ledger Entry
-            console.log(`🧾 Creating Ledger Entry: ${concept} ($${amount})`);
+            // 2. Register in Ledger (Standard/Fallback)
             const ok = await createLedgerEntry({
-                concept: concept || title,
+                concept: concept || title || "Gasto",
                 amount: amount,
                 category: financeCategory || "Imprevistos",
                 paymentMethod: "Voz / Zenith AI",
                 receiptUrl: receiptUrl,
-                notes: summary
+                notes: summary || text
             });
 
             if (ok) {
-                return NextResponse.json({
-                    success: true,
-                    message: `🧾 Gasto registrado en Ledger: ${concept} ($${amount})`,
-                    action: "new_expense"
-                });
+                return NextResponse.json({ success: true, message: `🧾 Gasto registrado: ${concept || title} ($${amount})`, action: "new_expense" });
             } else {
-                return NextResponse.json({
-                    error: "Coda Reject: Verifica que el Doc ID y el Token sean correctos y que las columnas existan."
-                }, { status: 500 });
+                return NextResponse.json({ error: "Coda Error: No se pudo escribir en Finance_Ledger. Verifica columnas y Doc ID." }, { status: 500 });
             }
         }
 
-        // --- Standard Note Logic (Fallback) ---
-        const noteType = type || 'Meeting';
-        const noteTitle = title || `Nota - ${new Date().toLocaleDateString()}`;
-        const noteSummary = summary || text.substring(0, 100);
+        // --- Standard Note Fallback (Only if no finance detected) ---
+        const success = await createNote({
+            title: title || `Nota ${new Date().toLocaleDateString()}`,
+            type: type || 'Idea',
+            project, rawText: text, summary: summary || text, tags: "Voice"
+        }, 'Personal_Inbox');
 
-        const newNote: NoteData = {
-            title: noteTitle,
-            type: noteType,
-            project: project,
-            rawText: text,
-            summary: noteSummary,
-            tags: "Voice Upload"
-        };
-
-        const success = await createNote(newNote, 'Personal_Inbox');
-
-        if (success) {
-            return NextResponse.json({ success: true, message: `Nota guardada como '${noteTitle}'` });
-        } else {
-            return NextResponse.json({ error: 'Failed to save to Coda' }, { status: 500 });
-        }
+        return success
+            ? NextResponse.json({ success: true, message: "Nota guardada." })
+            : NextResponse.json({ error: "No se reconoció como gasto y falló el guardado como nota." }, { status: 500 });
 
     } catch (error) {
-        console.error("API Error:", error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        console.error("API Global Error:", error);
+        return NextResponse.json({ error: 'Error Interno: ' + (error as any).message }, { status: 500 });
     }
 }
