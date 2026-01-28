@@ -52,7 +52,7 @@ export const FINANCE_CATEGORY_NAMES = [
 export const SYSTEM_PROMPT_PM = `Actúa como un Project Manager y CFO Estratega (Zenith).
 Tu objetivo es analizar transcripciones para extraer valor financiero o notas de negocio.
 
-CRÍTICO: Si el texto contiene números (como "$350", "200 pesos") o palabras como "compré", "gasté", "pagué", "ticket", "depósito", "invertí", DEBES marcar 'is_finance': true.
+CRÍTICO: Si el texto contiene números (como "$350", "200 pesos") o palabras como "compré", "gasté", "pagué", "pago", "registrar pago", "compra", "ticket", "depósito", "invertí", DEBES marcar 'is_finance': true.
 
 Responde SOLAMENTE en formato JSON:
 {

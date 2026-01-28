@@ -43,7 +43,7 @@ export async function POST(request: Request) {
                 // --- SUPER FORCE FINANCE DETECTION ---
                 const normalizedText = text.toLowerCase();
                 const hasAmount = /\d+/.test(text);
-                const hasKeywords = normalizedText.includes("$") || normalizedText.includes("pesos") || normalizedText.includes("gaste") || normalizedText.includes("pague") || normalizedText.includes("compre") || normalizedText.includes("ticket");
+                const hasKeywords = normalizedText.includes("$") || normalizedText.includes("pesos") || normalizedText.includes("gaste") || normalizedText.includes("pague") || normalizedText.includes("compre") || normalizedText.includes("ticket") || normalizedText.includes("pago") || normalizedText.includes("compra") || normalizedText.includes("registrar");
 
                 if (aiResponse.finance_details?.is_finance || hasKeywords || (type === "Expense" && hasAmount)) {
                     aiFinanceDetails = aiResponse.finance_details || {
