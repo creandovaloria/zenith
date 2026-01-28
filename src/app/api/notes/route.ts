@@ -41,10 +41,11 @@ export async function POST(request: NextRequest) {
             const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
             const userContent: any[] = [{ type: "text", text: `Analiza: "${rawTextToProcess}".` }];
             if (receiptUrl) {
-                // More robust Dropbox direct image transformation
-                const directImageUrl = receiptUrl.includes('?')
-                    ? receiptUrl.replace(/\?dl=\d+/, '?raw=1')
-                    : receiptUrl + '?raw=1';
+                // The cleanest way to get a direct image from Dropbox for AI Vision
+                const directImageUrl = receiptUrl
+                    .replace("www.dropbox.com", "dl.dropboxusercontent.com")
+                    .replace(/\?dl=\d+/, "")
+                    .replace(/&dl=\d+/, "");
 
                 userContent.push({ type: "image_url", image_url: { url: directImageUrl } });
             }
