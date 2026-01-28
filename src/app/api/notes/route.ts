@@ -85,34 +85,106 @@ export async function POST(request: NextRequest) {
             const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             const normalizedDictation = normalize(rawTextToProcess);
 
+            // Aliases/sinónimos para conceptos comunes de gastos fijos
+            const conceptAliases: Record<string, string[]> = {
+                "celular": ["celular", "telefono", "tel", "movil", "telcel", "att", "at&t", "movistar"],
+                "internet": ["internet", "izzi", "telmex", "totalplay", "megacable", "wifi"],
+                "luz": ["luz", "cfe", "electrica", "electricidad"],
+                "agua": ["agua", "sapal", "aguascalientes", "hidraulico"],
+                "gas": ["gas", "natural", "lp"],
+                "renta": ["renta", "alquiler", "arrendamiento"],
+                "hipoteca": ["hipoteca", "credito hipotecario", "infonavit", "fovissste"],
+                "colegiatura": ["colegiatura", "colegio", "escuela", "mensualidad escolar"],
+                "pension": ["pension", "alimenticia"],
+                "kumon": ["kumon"],
+                "gimnasia": ["gimnasia", "gym", "gimnasio"]
+            };
+
             // Palabras comunes a ignorar en el matching
-            const stopWords = ["pago", "pague", "pagar", "registrar", "de", "el", "la", "los", "las", "un", "una", "del", "al", "ya", "hoy", "ayer"];
+            const stopWords = ["pago", "pague", "pagar", "registrar", "de", "el", "la", "los", "las", "un", "una", "del", "al", "ya", "hoy", "ayer", "por"];
 
             // Extraer palabras clave significativas del dictado
             const dictationWords = normalizedDictation.split(/\s+/).filter(word =>
                 word.length > 2 && !stopWords.includes(word)
             );
 
-            const target = projections.find(p => {
-                if (p.status.includes("✅")) return false;
-                const concept = normalize(p.concept);
-                const conceptWords = concept.split(/\s+/);
+            console.log(`🔍 [MATCHING] Dictado: "${normalizedDictation}"`);
+            console.log(`🔍 [MATCHING] Palabras clave: [${dictationWords.join(", ")}]`);
+            console.log(`🔍 [MATCHING] Proyecciones pendientes: ${projections.filter(p => !p.status.includes("✅")).length}`);
 
-                // Match si: 1) el dictado contiene el concepto, 2) el concepto contiene el dictado,
-                // o 3) alguna palabra clave del dictado está en el concepto
-                return normalizedDictation.includes(concept) ||
-                    concept.includes(normalizedDictation) ||
-                    dictationWords.some(word => concept.includes(word)) ||
-                    conceptWords.some(cWord => dictationWords.includes(cWord));
+            // Buscar qué alias matchea el dictado
+            let matchedAliasKey: string | null = null;
+            for (const [key, aliases] of Object.entries(conceptAliases)) {
+                if (aliases.some(alias => normalizedDictation.includes(alias) || dictationWords.includes(alias))) {
+                    matchedAliasKey = key;
+                    console.log(`🔍 [MATCHING] Alias detectado: "${key}" (via aliases)`);
+                    break;
+                }
+            }
+
+            // Función para calcular score de coincidencia
+            const calculateMatchScore = (concept: string): number => {
+                const normalizedConcept = normalize(concept);
+                const conceptWords = normalizedConcept.split(/\s+/);
+                let score = 0;
+
+                // Match exacto = 100 puntos
+                if (normalizedDictation.includes(normalizedConcept) || normalizedConcept.includes(normalizedDictation)) {
+                    score += 100;
+                }
+
+                // Match por palabras clave = 10 puntos por palabra
+                for (const word of dictationWords) {
+                    if (normalizedConcept.includes(word)) score += 10;
+                }
+                for (const cWord of conceptWords) {
+                    if (dictationWords.includes(cWord)) score += 10;
+                }
+
+                // Match por alias = 50 puntos
+                if (matchedAliasKey) {
+                    const aliases = conceptAliases[matchedAliasKey];
+                    if (aliases.some(alias => normalizedConcept.includes(alias))) {
+                        score += 50;
+                    }
+                }
+
+                return score;
+            };
+
+            // Filtrar proyecciones pendientes y calcular scores
+            const today = new Date();
+            const pendingProjections = projections
+                .filter(p => !p.status.includes("✅"))
+                .map(p => ({
+                    ...p,
+                    score: calculateMatchScore(p.concept),
+                    daysFromToday: Math.abs(Math.floor((new Date(p.date).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)))
+                }))
+                .filter(p => p.score > 0) // Solo proyecciones con algún match
+                .sort((a, b) => {
+                    // Primero por score (mayor es mejor), luego por cercanía a hoy
+                    if (b.score !== a.score) return b.score - a.score;
+                    return a.daysFromToday - b.daysFromToday;
+                });
+
+            console.log(`🔍 [MATCHING] Candidatos con score > 0:`);
+            pendingProjections.slice(0, 5).forEach(p => {
+                console.log(`   - "${p.concept}" (Score: ${p.score}, Días: ${p.daysFromToday})`);
             });
 
+            const target = pendingProjections[0]; // Mejor match
+
             if (target) {
+                console.log(`✅ [MATCHING] Target encontrado: "${target.concept}" (ID: ${target.id})`);
                 success = await updateFinanceStatus(target.id, "✅ Pagado", {
                     receiptUrl,
                     notes: aiDetails.summary,
                     title: rawTextToProcess.substring(0, 100)
                 });
                 message = `✅ Pagado: ${target.concept}`;
+            } else {
+                console.log(`❌ [MATCHING] No se encontró proyección coincidente para: "${normalizedDictation}"`);
             }
         }
 
