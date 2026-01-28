@@ -74,13 +74,20 @@ export async function POST(request: NextRequest) {
 
         if (aiDetails.isFixed) {
             const projections = await getFinanceProjections();
-            const target = projections.find(p => !p.status.includes("✅") && (normalizedText.includes(p.concept.toLowerCase()) || p.concept.toLowerCase().includes(normalizedText)));
+            const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            const normalizedDictation = normalize(rawTextToProcess);
+
+            const target = projections.find(p => {
+                if (p.status.includes("✅")) return false;
+                const concept = normalize(p.concept);
+                return normalizedDictation.includes(concept) || concept.includes(normalizedDictation);
+            });
 
             if (target) {
                 success = await updateFinanceStatus(target.id, "✅ Pagado", {
                     receiptUrl,
                     notes: aiDetails.summary,
-                    title: finalConcept
+                    title: rawTextToProcess.substring(0, 100)
                 });
                 message = `✅ Pagado: ${target.concept}`;
             }
