@@ -456,14 +456,13 @@ export async function getFinanceRules(docId?: string, apiToken?: string): Promis
     }
 }
 
-export async function updateFinanceStatus(rowId: string, status: string = "✅ Pagado", extra?: { receiptUrl?: string, notes?: string, title?: string }, docId?: string, apiToken?: string): Promise<boolean> {
+export async function updateFinanceStatus(rowId: string, status: string = "✅ Pagado", extra?: { receiptUrl?: string, notes?: string, title?: string }, docId?: string, apiToken?: string, tableName: string = "Finance_Projection"): Promise<boolean> {
     const targetDocId = docId || process.env.CODA_DOC_ID_FINANCE_CORE || process.env.CODA_DOC_ID_SUBSCRIPTIONS || process.env.CODA_DOC_ID;
     const token = apiToken || CODA_API_TOKEN;
 
     if (!token || !targetDocId) return false;
 
     try {
-        const tableName = "Finance_Projection";
         const url = `https://coda.io/apis/v1/docs/${targetDocId}/tables/${tableName}/rows/${rowId}`;
 
         const payload = {
@@ -547,13 +546,14 @@ export async function createLedgerEntry(entry: LedgerEntry, docId?: string, apiT
         if (!res.ok) {
             const err = await res.text();
             console.error("Error creating Ledger row:", res.status, err);
-            return false;
+            return null;
         }
 
-        return true;
+        const data = await res.json();
+        return data.addedRowIds?.[0] || null;
     } catch (error) {
         console.error("Error in createLedgerEntry:", error);
-        return false;
+        return null;
     }
 }
 

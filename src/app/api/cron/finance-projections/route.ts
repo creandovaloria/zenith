@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
         }).map(rule => ({
             conceptId: `${rule.name}-${monthLabel}`,
             name: rule.name,
-            date: new Date(currentYear, currentMonth - 1, rule.day).toISOString(),
+            date: format(new Date(currentYear, currentMonth - 1, rule.day), 'yyyy-MM-dd'),
             amount: rule.amount,
             category: rule.category
         }));
