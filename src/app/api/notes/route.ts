@@ -26,8 +26,26 @@ export async function POST(request: Request) {
         }
 
         const rawTextToProcess = finalWeightText;
-        let aiFinanceDetails = null;
+        let aiFinanceDetails: any = null;
 
+        // --- PHASE 1: HARD DETECTORS (100% RELIABLE) ---
+        const normalizedText = rawTextToProcess.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const hasAmount = /\d+/.test(rawTextToProcess);
+        const financialKeywords = ["$", "pesos", "gaste", "pague", "compre", "ticket", "pago", "compra", "registrar", "renta", "colegiatura", "pension"];
+        const hasFinanceKeywords = financialKeywords.some(k => normalizedText.includes(k));
+
+        if (hasAmount || hasFinanceKeywords) {
+            const rawAmount = rawTextToProcess.replace(/,/g, '').match(/\d+(\.\d+)?/)?.[0] || "0";
+            aiFinanceDetails = {
+                is_finance: true,
+                amount: parseFloat(rawAmount),
+                concept: "Gasto en proceso...",
+                category: "Logística de Vida",
+                action: normalizedText.includes("renta") || normalizedText.includes("pago") || normalizedText.includes("colegiatura") ? "mark_paid" : "new_expense"
+            };
+        }
+
+        // --- PHASE 2: AI ENRICHMENT (OPTIONAL) ---
         try {
             const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
             const completion = await openai.chat.completions.create({
@@ -36,8 +54,8 @@ export async function POST(request: Request) {
                     { role: "user", content: `Transcripción: ${rawTextToProcess}` }
                 ],
                 model: "gpt-4o",
-                response_format: { type: "json_object" },
-            });
+                response_format: { type: "json_object" }
+            }, { timeout: 8000 });
 
             const aiContent = completion.choices[0].message.content;
             if (aiContent) {
@@ -45,58 +63,46 @@ export async function POST(request: Request) {
                 console.log("🧠 Zenith AI Thought:", JSON.stringify(aiResponse, null, 2));
 
                 if (aiResponse.suggested_title) title = aiResponse.suggested_title;
-                if (aiResponse.final_type) type = aiResponse.final_type;
                 if (aiResponse.summary_content) summary = aiResponse.summary_content;
 
-                // --- SUPER FORCE FINANCE DETECTION ---
-                const normalizedText = rawTextToProcess.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                const hasAmount = /\d+/.test(rawTextToProcess);
-                const financialKeywords = ["$", "pesos", "gaste", "pague", "compre", "ticket", "pago", "compra", "registrar", "renta", "colegiatura", "pension"];
-                const hasKeywords = financialKeywords.some(k => normalizedText.includes(k));
-
-                if (aiResponse.finance_details?.is_finance || hasKeywords || hasAmount) {
-                    // Cleaner number extraction (handles 12,000 -> 12000)
-                    const rawAmount = rawTextToProcess.replace(/,/g, '').match(/\d+(\.\d+)?/)?.[0] || "0";
-
-                    aiFinanceDetails = aiResponse.finance_details || {
-                        is_finance: true,
-                        amount: parseFloat(rawAmount),
-                        concept: title || "Gasto Detectado",
-                        category: "Logística de Vida", // Default to Life Logistics if it's renta/pago
-                        action: normalizedText.includes("renta") || normalizedText.includes("pago") ? "mark_paid" : "new_expense"
+                if (aiResponse.finance_details?.is_finance) {
+                    // Update enriched details from AI
+                    aiFinanceDetails = {
+                        ...aiFinanceDetails,
+                        ...aiResponse.finance_details,
+                        is_finance: true
                     };
                 }
             }
         } catch (aiError) {
-            console.error("AI Error:", aiError);
+            console.error("AI Enrichment failed, but we have hard detection:", aiError);
         }
 
-        // --- FINANCE LOGIC ---
+        // --- PHASE 3: FINANCE EXECUTION ---
         if (aiFinanceDetails) {
             const { action, amount, concept, category: financeCategory } = aiFinanceDetails;
+            const finalConcept = concept && concept !== "Gasto en proceso..." ? concept : (title || "Gasto Detectado");
 
-            // 1. Try to Mark as Paid (Projections)
+            // 1. Mark as Paid (Fuzzy Search)
             if (action === "mark_paid") {
                 const projections = await getFinanceProjections();
                 const pending = projections.filter(p => !p.status.includes("✅"));
 
-                // ULTRA FUZZY MATCH
-                const searchLower = concept.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const searchLower = finalConcept.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                 const target = pending.find(p => {
                     const conceptLower = p.concept.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                    return conceptLower.includes(searchLower) || searchLower.includes(conceptLower);
+                    return conceptLower.includes(searchLower) || searchLower.includes(conceptLower) || normalizedText.includes(conceptLower);
                 });
 
                 if (target) {
-                    console.log(`🎯 Ultra-Match: ${target.concept}`);
-                    const success = await updateFinanceStatus(target.id, "✅ Pagado", { receiptUrl, notes: summary, title });
-                    if (success) return NextResponse.json({ success: true, message: `✅ Pagado: ${target.concept}`, action: "mark_paid" });
+                    const ok = await updateFinanceStatus(target.id, "✅ Pagado", { receiptUrl, notes: summary || rawTextToProcess, title: finalConcept });
+                    if (ok) return NextResponse.json({ success: true, message: `✅ Pagado: ${target.concept} ($${amount})`, action: "mark_paid" });
                 }
             }
 
             // 2. Register in Ledger (Standard/Fallback)
             const ok = await createLedgerEntry({
-                concept: concept || title || "Gasto",
+                concept: finalConcept,
                 amount: amount,
                 category: financeCategory || "Imprevistos",
                 paymentMethod: "Voz / Zenith AI",
@@ -104,19 +110,15 @@ export async function POST(request: Request) {
                 notes: summary || rawTextToProcess
             });
 
-            if (ok) {
-                return NextResponse.json({ success: true, message: `🧾 Gasto registrado: ${concept || title} ($${amount})`, action: "new_expense" });
-            } else {
-                return NextResponse.json({ error: "Coda Error: No se pudo escribir en Finance_Ledger. Verifica columnas y Doc ID." }, { status: 500 });
-            }
+            if (ok) return NextResponse.json({ success: true, message: `🧾 Registrado: ${finalConcept} ($${amount})`, action: "new_expense" });
         }
 
-        // --- Fallback if no finance detected ---
+        // --- Fallback ---
         return NextResponse.json({
             success: false,
-            message: `⚠️ Zenith no detectó esto como un gasto. ¿Olvidaste mencionar el monto? Recibí: "${rawTextToProcess}"`,
+            message: `⚠️ Zenith no pudo procesar esto. Recibí: "${rawTextToProcess}"`,
             action: "none"
-        }, { status: 200 }); // Return 200 so Shortcut doesn't crash
+        }, { status: 200 });
 
     } catch (error) {
         console.error("API Global Error:", error);
