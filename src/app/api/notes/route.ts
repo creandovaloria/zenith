@@ -86,13 +86,16 @@ export async function POST(request: NextRequest) {
 
                     const aiResponse = JSON.parse(completion.choices[0].message.content || "{}");
                     const finalSummary = aiResponse.summary_content || "Procesado con éxito.";
+                    const updatePayload: any = { notes: finalSummary, title: rawTextToProcess };
+                    const finalStatus = tableName === "Finance_Projection" ? "✅ Pagado" : undefined;
 
                     await updateFinanceStatus(
                         rowIdToEnrich,
-                        tableName === "Finance_Projection" ? "✅ Pagado" : "Regular",
-                        { notes: finalSummary, title: rawTextToProcess },
+                        finalStatus,
+                        updatePayload,
                         undefined, undefined, tableName
                     );
+                    console.log(`✨ Enrichment complete for ${tableName} Row: ${rowIdToEnrich}`);
                 } catch (e) {
                     console.error("Enrichment Error:", e);
                 }
