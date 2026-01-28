@@ -55,9 +55,9 @@ export async function POST(request: NextRequest) {
                     { role: "system", content: SYSTEM_PROMPT_PM },
                     { role: "user", content: userContent }
                 ],
-                model: "gpt-4o",
+                model: receiptUrl ? "gpt-4o" : "gpt-4o-mini",
                 response_format: { type: "json_object" }
-            }, { timeout: 20000 }); // Increase to 20s
+            }, { timeout: receiptUrl ? 20000 : 10000 });
 
             const aiRes = JSON.parse(completion.choices[0].message.content || "{}");
             aiDetails.summary = aiRes.summary_content || aiDetails.summary;
