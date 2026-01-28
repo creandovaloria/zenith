@@ -45,22 +45,36 @@ export async function POST(request: Request) {
             };
         }
 
-        // --- PHASE 2: AI ENRICHMENT (OPTIONAL) ---
+        // --- PHASE 2: AI ENRICHMENT (Vision + Text) ---
         try {
             const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+            // Prepare messages for Vision if there's an image
+            const userContent: any[] = [{ type: "text", text: `Transcripción del usuario: "${rawTextToProcess}"` }];
+
+            if (receiptUrl) {
+                // Prepare Dropbox link for direct access by OpenAI Vision
+                const directImageUrl = receiptUrl.replace("www.dropbox.com", "dl.dropboxusercontent.com").replace("?dl=0", "");
+                userContent.push({
+                    type: "image_url",
+                    image_url: { url: directImageUrl }
+                });
+                userContent[0].text += " | IMPORTANTE: También tienes una foto del ticket. Analízala (OCR) y combina la información con el audio en el resumen.";
+            }
+
             const completion = await openai.chat.completions.create({
                 messages: [
                     { role: "system", content: SYSTEM_PROMPT_PM },
-                    { role: "user", content: `Transcripción: ${rawTextToProcess}` }
+                    { role: "user", content: userContent }
                 ],
                 model: "gpt-4o",
                 response_format: { type: "json_object" }
-            }, { timeout: 8000 });
+            }, { timeout: 12000 });
 
             const aiContent = completion.choices[0].message.content;
             if (aiContent) {
                 const aiResponse = JSON.parse(aiContent);
-                console.log("🧠 Zenith AI Thought:", JSON.stringify(aiResponse, null, 2));
+                console.log("🧠 Zenith Vision/AI Thought:", JSON.stringify(aiResponse, null, 2));
 
                 if (aiResponse.suggested_title) title = aiResponse.suggested_title;
                 if (aiResponse.summary_content) summary = aiResponse.summary_content;
@@ -75,27 +89,30 @@ export async function POST(request: Request) {
                 }
             }
         } catch (aiError) {
-            console.error("AI Enrichment failed, but we have hard detection:", aiError);
+            console.error("AI Enrichment failed:", aiError);
         }
 
         // --- PHASE 3: FINANCE EXECUTION ---
         if (aiFinanceDetails) {
             const { action, amount, concept, category: financeCategory } = aiFinanceDetails;
-            const finalConcept = concept && concept !== "Gasto en proceso..." ? concept : (title || "Gasto Detectado");
+
+            // USER WISH: Concepto carries the raw dictation
+            const finalConcept = rawTextToProcess;
 
             // 1. Mark as Paid (Fuzzy Search)
             if (action === "mark_paid") {
                 const projections = await getFinanceProjections();
                 const pending = projections.filter(p => !p.status.includes("✅"));
 
-                const searchLower = finalConcept.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                // Use transcription to match if concept is too generic
                 const target = pending.find(p => {
                     const conceptLower = p.concept.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                    return conceptLower.includes(searchLower) || searchLower.includes(conceptLower) || normalizedText.includes(conceptLower);
+                    const dictationLower = rawTextToProcess.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    return dictationLower.includes(conceptLower) || conceptLower.includes(dictationLower);
                 });
 
                 if (target) {
-                    const ok = await updateFinanceStatus(target.id, "✅ Pagado", { receiptUrl, notes: summary || rawTextToProcess, title: finalConcept });
+                    const ok = await updateFinanceStatus(target.id, "✅ Pagado", { receiptUrl, notes: summary || "Procesado por IA", title: finalConcept });
                     if (ok) return NextResponse.json({ success: true, message: `✅ Pagado: ${target.concept} ($${amount})`, action: "mark_paid" });
                 }
             }
@@ -107,10 +124,10 @@ export async function POST(request: Request) {
                 category: financeCategory || "Imprevistos",
                 paymentMethod: "Voz / Zenith AI",
                 receiptUrl: receiptUrl,
-                notes: summary || rawTextToProcess
+                notes: summary || "Registrado sin resumen"
             });
 
-            if (ok) return NextResponse.json({ success: true, message: `🧾 Registrado: ${finalConcept} ($${amount})`, action: "new_expense" });
+            if (ok) return NextResponse.json({ success: true, message: `🧾 Registrado: ${finalConcept.substring(0, 30)}... ($${amount})`, action: "new_expense" });
         }
 
         // --- Fallback ---
