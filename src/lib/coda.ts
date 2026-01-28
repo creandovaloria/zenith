@@ -364,16 +364,18 @@ export async function getFinanceProjections(docId?: string, apiToken?: string): 
             };
 
             const keys = Object.keys(val);
+            // Search for a key that matches and HAS a value
             const conceptKey = keys.find(k => {
-                const normalized = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                return normalized === "concepto" || normalized === "nombre" || normalized === "name" || normalized === "id gasto";
+                const n = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                const isMatch = n === "concepto" || n === "nombre" || n === "name" || n === "id gasto" || n === "regla vinculada";
+                return isMatch && val[k] && resolveV(val[k]) !== "";
             });
 
             const conceptValue = resolveV(conceptKey ? val[conceptKey] : null);
 
             return {
                 id: row.id,
-                concept: row.name || conceptValue || "Sin Concepto",
+                concept: conceptValue || row.name || "Sin Concepto",
                 date: val["Fecha de Pago"] || new Date().toISOString(),
                 amount: safeNumber(val["Monto"]),
                 status: val["Estado"] || "⏳ Pendiente",
