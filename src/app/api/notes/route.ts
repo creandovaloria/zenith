@@ -92,19 +92,12 @@ export async function POST(request: Request) {
             }
         }
 
-        // --- Standard Note Fallback (Only if no finance detected) ---
-        const success = await createNote({
-            title: title || `Nota ${new Date().toLocaleDateString()}`,
-            type: type || 'Idea',
-            project, rawText: text, summary: summary || text, tags: "Voice"
-        }, 'Personal_Inbox');
-
-        return success
-            ? NextResponse.json({ success: true, message: "Nota guardada." })
-            : NextResponse.json({
-                error: "No se reconoció como gasto y falló el guardado como nota.",
-                textReceived: text
-            }, { status: 500 });
+        // --- Fallback if no finance detected ---
+        return NextResponse.json({
+            success: false,
+            message: `⚠️ Zenith no detectó esto como un gasto. ¿Olvidaste mencionar el monto? Recibí: "${text}"`,
+            action: "none"
+        }, { status: 200 }); // Return 200 so Shortcut doesn't crash
 
     } catch (error) {
         console.error("API Global Error:", error);
