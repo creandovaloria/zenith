@@ -1,8 +1,5 @@
-
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import {
-    createNote,
-    NoteData,
     getFinanceProjections,
     updateFinanceStatus,
     createLedgerEntry
@@ -10,22 +7,18 @@ import {
 import OpenAI from 'openai';
 import { SYSTEM_PROMPT_PM } from '@/lib/prompts';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        // Support both 'text' and 'Text' because iOS Shortcuts can be inconsistent
-        let { text, Text, type, title, summary, category, project, receiptUrl } = body;
-        const finalWeightText = text || Text;
+        const { text, Text, receiptUrl } = body;
+        const rawTextToProcess = text || Text;
 
-        if (!finalWeightText) {
+        if (!rawTextToProcess) {
             return NextResponse.json({
                 error: 'Missing "text" field',
-                receivedBody: body,
                 hint: "Asegúrate de que el Atajo pase la variable 'Texto transcrito' al campo 'text' del JSON."
             }, { status: 400 });
         }
-
-        const rawTextToProcess = finalWeightText;
 
         // --- STEP 1: FAST HARD DETECTION ---
         const normalizedText = rawTextToProcess.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -51,7 +44,7 @@ export async function POST(request: Request) {
                 });
 
                 if (target) {
-                    await updateFinanceStatus(target.id, "✅ Pagado", { receiptUrl, notes: "⌛ Generando resumen IA...", title: rawTextToProcess });
+                    await updateFinanceStatus(target.id, "✅ Pagado", { receiptUrl, notes: "⌛ Procesando...", title: rawTextToProcess });
                     rowIdToEnrich = target.id;
                     tableName = "Finance_Projection";
                 }
@@ -61,10 +54,10 @@ export async function POST(request: Request) {
                 const newRowId = await createLedgerEntry({
                     concept: rawTextToProcess,
                     amount: amount,
-                    category: "Inversión Personal Presencia", // Default
+                    category: "Imprevistos",
                     paymentMethod: "Voz / Zenith AI",
                     receiptUrl: receiptUrl,
-                    notes: "⌛ Analizando ticket con IA..."
+                    notes: "⌛ Procesando..."
                 });
                 if (newRowId) {
                     rowIdToEnrich = newRowId as string;
@@ -72,63 +65,53 @@ export async function POST(request: Request) {
                 }
             }
 
-            // --- STEP 3: ASYNC ENRICHMENT (Fire and Forget) ---
+            // --- STEP 3: SYNC ENRICHMENT ---
             if (rowIdToEnrich) {
-                // Return response immediately
-                NextResponse.json({ success: true, message: `✅ Recibido: ${rawTextToProcess.substring(0, 20)}...` });
-
-                // Keep processing in background (Node.js magic)
-                (async () => {
-                    try {
-                        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-                        const userContent: any[] = [{ type: "text", text: `Analiza esta transacción financiera. Voz: "${rawTextToProcess}".` }];
-                        if (receiptUrl) {
-                            const directImageUrl = receiptUrl.replace("www.dropbox.com", "dl.dropboxusercontent.com").replace("?dl=0", "");
-                            userContent.push({ type: "image_url", image_url: { url: directImageUrl } });
-                            userContent[0].text += " También lee el ticket (OCR).";
-                        }
-
-                        const completion = await openai.chat.completions.create({
-                            messages: [
-                                { role: "system", content: SYSTEM_PROMPT_PM },
-                                { role: "user", content: userContent }
-                            ],
-                            model: "gpt-4o",
-                            response_format: { type: "json_object" }
-                        });
-
-                        const aiResponse = JSON.parse(completion.choices[0].message.content || "{}");
-                        const finalSummary = aiResponse.summary_content || "Procesado con éxito.";
-                        const finalCategory = aiResponse.finance_details?.category || "General";
-
-                        // Update the row with final AI details
-                        await updateFinanceStatus(rowIdToEnrich, tableName === "Finance_Projection" ? "✅ Pagado" : undefined, {
-                            notes: finalSummary,
-                            title: rawTextToProcess // Keep raw dictation as concept
-                        }, undefined, undefined, tableName);
-                        // Note: updateFinanceStatus currently hardcoded to Finance_Projection, 
-                        // but we'll fix it in coda.ts to be generic or create updateFinanceRow.
-                    } catch (e) {
-                        console.error("Background Enrichment Error:", e);
+                try {
+                    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+                    const userContent: any[] = [{ type: "text", text: `Analiza: "${rawTextToProcess}".` }];
+                    if (receiptUrl) {
+                        const directImageUrl = receiptUrl.replace("www.dropbox.com", "dl.dropboxusercontent.com").replace("?dl=0", "");
+                        userContent.push({ type: "image_url", image_url: { url: directImageUrl } });
                     }
-                })();
-            }
 
-            return NextResponse.json({
-                success: true,
-                message: `✅ Gasto registrado: ${rawTextToProcess.substring(0, 30)} ($${amount})`
-            });
+                    const completion = await openai.chat.completions.create({
+                        messages: [
+                            { role: "system", content: SYSTEM_PROMPT_PM },
+                            { role: "user", content: userContent }
+                        ],
+                        model: "gpt-4o",
+                        response_format: { type: "json_object" }
+                    });
+
+                    const aiResponse = JSON.parse(completion.choices[0].message.content || "{}");
+                    const finalSummary = aiResponse.summary_content || "Procesado con éxito.";
+
+                    await updateFinanceStatus(
+                        rowIdToEnrich,
+                        tableName === "Finance_Projection" ? "✅ Pagado" : "Regular",
+                        { notes: finalSummary, title: rawTextToProcess },
+                        undefined, undefined, tableName
+                    );
+                } catch (e) {
+                    console.error("Enrichment Error:", e);
+                }
+
+                return NextResponse.json({
+                    success: true,
+                    message: `✅ Gasto ok: ${rawTextToProcess.substring(0, 30)}... ($${amount})`
+                });
+            }
         }
 
-        // --- Fallback ---
         return NextResponse.json({
             success: false,
-            message: `⚠️ Zenith no pudo procesar esto. Recibí: "${rawTextToProcess}"`,
+            message: `⚠️ Zenith no detectó esto como un gasto.`,
             action: "none"
         }, { status: 200 });
 
     } catch (error) {
         console.error("API Global Error:", error);
-        return NextResponse.json({ error: 'Error Interno: ' + (error as any).message }, { status: 500 });
+        return NextResponse.json({ error: 'Error Interno' }, { status: 500 });
     }
 }
