@@ -33,6 +33,8 @@ import { cn } from "@/lib/utils";
 import { getLatestBiometrics, getFinanceProjections, FinanceItem } from "@/lib/coda";
 import { MarkPaidButton } from "@/components/MarkPaidButton";
 
+export const dynamic = 'force-dynamic';
+
 // --- Types ---
 // --- Types ---
 type Role = {

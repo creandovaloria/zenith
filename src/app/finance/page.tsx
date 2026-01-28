@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 import { getFinanceProjections, getFinanceRules, getFinanceBudgets, getFinanceLedger, LedgerEntry } from "@/lib/coda";
 import { MarkPaidButton } from "@/components/MarkPaidButton";
 
+export const dynamic = 'force-dynamic';
+
 export default async function FinancePage() {
     const currentDate = new Date();
     const currentMonthName = format(currentDate, "MMMM", { locale: es });
