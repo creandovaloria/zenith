@@ -101,7 +101,10 @@ export async function POST(request: Request) {
 
         return success
             ? NextResponse.json({ success: true, message: "Nota guardada." })
-            : NextResponse.json({ error: "No se reconoció como gasto y falló el guardado como nota." }, { status: 500 });
+            : NextResponse.json({
+                error: "No se reconoció como gasto y falló el guardado como nota.",
+                textReceived: text
+            }, { status: 500 });
 
     } catch (error) {
         console.error("API Global Error:", error);
