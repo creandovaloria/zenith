@@ -32,7 +32,11 @@ export async function GET(req: NextRequest) {
         }
 
         // 2. Identify which rows already exist for this month to avoid duplicates
-        const existingIds = new Set(projections.map(p => p.concept));
+        const existingIdentifiers = new Set(projections.map(p => {
+            const pDate = new Date(p.date);
+            const pMonth = format(pDate, "yyyy-MM");
+            return `${p.concept}-${pMonth}`;
+        }));
 
         // 3. Filter rules that apply to this month
         const newProjections = rules.filter(rule => {
@@ -66,7 +70,7 @@ export async function GET(req: NextRequest) {
             const conceptId = `${rule.name}-${monthLabel}`;
 
             // Check if already exists
-            if (existingIds.has(conceptId)) return false;
+            if (existingIdentifiers.has(conceptId)) return false;
 
             return true;
         }).map(rule => ({
