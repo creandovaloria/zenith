@@ -63,7 +63,7 @@ Responde SOLAMENTE en formato JSON:
         "is_finance": true,
         "amount": monto numérico,
         "concept": "Nombre corto del gasto",
-        "category": "ELEGIR UNA DE ESTA LISTA EXACTA: ${FINANCE_CATEGORY_NAMES.join(' | ')}",
+        "category": "ELEGIR UNA DE ESTA LISTA EXACTA: ${FINANCE_CATEGORIES.join(' | ')}",
         "action": "mark_paid" (CONFIRMACIÓN DE PAGO FIJO como Renta, Colegiatura, Internet, Servicios) o "new_expense" (COMPRA VARIABLE como Super, Comida, Tacos, Café, Gasolina),
         "is_business": true/false
     }

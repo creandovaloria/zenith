@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
         let aiDetails: any = {
             amount: parseFloat(rawTextToProcess.replace(/,/g, '').match(/\d+(\.\d+)?/)?.[0] || "0"),
             summary: "Procesado sin resumen IA",
+            category: "Imprevistos (Emergencias, reparaciones)", // Full Coda Name
             isFixed: normalizedText.includes("renta") || normalizedText.includes("pago") || normalizedText.includes("colegiatura")
         };
 
@@ -61,7 +62,11 @@ export async function POST(request: NextRequest) {
 
             const aiRes = JSON.parse(completion.choices[0].message.content || "{}");
             aiDetails.summary = aiRes.summary_content || aiDetails.summary;
-            if (aiRes.finance_details?.amount) aiDetails.amount = aiRes.finance_details.amount;
+
+            if (aiRes.finance_details) {
+                if (aiRes.finance_details.amount) aiDetails.amount = aiRes.finance_details.amount;
+                if (aiRes.finance_details.category) aiDetails.category = aiRes.finance_details.category;
+            }
         } catch (e: any) {
             console.error("AI Error (Falling back to raw data):", e);
             aiDetails.summary = `⚠️ Error IA: ${e.message || 'Fallo de conexión'}. | Dictado original: ${rawTextToProcess}`;
@@ -97,7 +102,7 @@ export async function POST(request: NextRequest) {
             const rowId = await createLedgerEntry({
                 concept: finalConcept,
                 amount: aiDetails.amount,
-                category: "Imprevistos",
+                category: aiDetails.category,
                 paymentMethod: "Voz / Zenith AI",
                 receiptUrl,
                 notes: aiDetails.summary
