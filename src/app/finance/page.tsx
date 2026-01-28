@@ -130,6 +130,9 @@ export default async function FinancePage() {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
+                    <a href="/api/cron/finance-projections?force=true" className="text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-3 py-1.5 rounded-full border border-primary/20 hover:bg-primary hover:text-white transition-all">
+                        Generar proyecciones
+                    </a>
                     <span className="text-xs font-mono bg-muted px-3 py-1.5 rounded-full border border-border capitalize">
                         {format(currentDate, "MMMM yyyy", { locale: es })}
                     </span>

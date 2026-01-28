@@ -575,6 +575,7 @@ export default async function Dashboard() {
         <div className="p-4 border-t border-border space-y-2">
           <NavItem icon={<Bell />} label="Check Alertas" href="/api/cron/subscriptions" />
           <NavItem icon={<FileText />} label="Reporte Mensual" href="/api/cron/subscriptions?forceReport=true" />
+          <NavItem icon={<CalendarIcon />} label="Generar Mes" href="/api/cron/finance-projections?force=true" />
           <NavItem icon={<Settings />} label="Configuración" />
         </div>
       </aside>

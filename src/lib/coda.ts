@@ -357,7 +357,7 @@ export async function getFinanceProjections(docId?: string, apiToken?: string): 
             // Use safe defaults
             return {
                 id: row.id,
-                concept: val["ID Gasto"] || val["Concepto"] || row.name || "Sin Concepto",
+                concept: val["Concepto"] || val["ID Gasto"] || val["Nombre"] || val["Name"] || row.name || "Sin Concepto",
                 date: val["Fecha de Pago"] || new Date().toISOString(),
                 amount: safeNumber(val["Monto"]),
                 status: val["Estado"] || "⏳ Pendiente",
@@ -380,6 +380,8 @@ export interface FinanceRule {
     day: number;
     active: boolean;
     category?: string;
+    startMonth?: number;
+    endMonth?: number;
 }
 
 export async function getFinanceRules(docId?: string, apiToken?: string): Promise<FinanceRule[]> {
@@ -411,7 +413,9 @@ export async function getFinanceRules(docId?: string, apiToken?: string): Promis
                 recurrence: val["Tipo Recurrencia"] || "Unknown",
                 day: safeNumber(val["Día de Corte"] || val["Día"] || val["Day"]),
                 active: val["Estado"] === "Activo",
-                category: val["Categoría"] || ""
+                category: val["Categoría"] || "",
+                startMonth: safeNumber(val["Mes Inicio"]),
+                endMonth: safeNumber(val["Mes Fin"])
             };
         });
     } catch (error) {
@@ -573,6 +577,45 @@ export async function getFinanceLedger(docId?: string, apiToken?: string) {
     } catch (error) {
         console.error("Error fetching ledger:", error);
         return [];
+    }
+}
+
+export async function createBulkProjections(rows: any[], docId?: string, apiToken?: string) {
+    const targetDocId = docId || process.env.CODA_DOC_ID_FINANCE_CORE;
+    const token = apiToken || CODA_API_TOKEN;
+
+    if (!token || !targetDocId || rows.length === 0) return false;
+
+    try {
+        const tableName = "Finance_Projection";
+        const url = `https://coda.io/apis/v1/docs/${targetDocId}/tables/${tableName}/rows`;
+
+        const payload = {
+            rows: rows.map(r => ({
+                cells: [
+                    { column: "ID Gasto", value: r.conceptId },
+                    { column: "Concepto", value: r.name },
+                    { column: "Fecha de Pago", value: r.date },
+                    { column: "Monto", value: r.amount },
+                    { column: "Estado", value: "⏳ Pendiente" },
+                    { column: "Categoría", value: r.category }
+                ]
+            }))
+        };
+
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        return res.ok;
+    } catch (error) {
+        console.error("Error in createBulkProjections:", error);
+        return false;
     }
 }
 
