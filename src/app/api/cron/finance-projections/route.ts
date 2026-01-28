@@ -32,11 +32,17 @@ export async function GET(req: NextRequest) {
         }
 
         // 2. Identify which rows already exist for this month to avoid duplicates
+        const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
         const existingIdentifiers = new Set(projections.map(p => {
-            const pDate = new Date(p.date);
-            const pMonth = format(pDate, "yyyy-MM");
-            return `${p.concept}-${pMonth}`;
+            if (!p.date) return `${normalize(p.concept || '')}-unknown`;
+            const pMonth = p.date.substring(0, 7); // "YYYY-MM"
+            return `${normalize(p.concept)}-${pMonth}`;
         }));
+
+        console.log("📋 Existing identifiers in Coda:", Array.from(existingIdentifiers));
+
+        console.log(`🔍 Zenith already found ${existingIdentifiers.size} projections in Coda.`);
 
         // 3. Filter rules that apply to this month
         const newProjections = rules.filter(rule => {
@@ -66,11 +72,14 @@ export async function GET(req: NextRequest) {
 
             if (!applies) return false;
 
-            // ID Generation (Constraint: Name-YYYY-MM)
-            const conceptId = `${rule.name}-${monthLabel}`;
+            // ID Generation (Normalized Rule Name + Month)
+            const conceptId = `${normalize(rule.name)}-${monthLabel}`;
 
-            // Check if already exists
-            if (existingIdentifiers.has(conceptId)) return false;
+            // Check if already exists in the set
+            if (existingIdentifiers.has(conceptId)) {
+                console.log(`🚫 Skipping duplicate: ${rule.name} for ${monthLabel}`);
+                return false;
+            }
 
             return true;
         }).map(rule => ({
