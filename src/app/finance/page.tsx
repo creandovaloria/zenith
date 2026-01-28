@@ -129,14 +129,15 @@ export default async function FinancePage() {
             if (rule.startMonth && m < rule.startMonth) return acc;
             if (rule.endMonth && m > rule.endMonth) return acc;
 
-            // Recurrence Logic
+            // Recurrence Logic (Normalized)
             let applies = false;
-            const rec = rule.recurrence;
-            if (rec === "Mensual") applies = true;
-            else if (rec === "Bimestral Par") applies = (m % 2 === 0);
-            else if (rec === "Bimestral Non") applies = (m % 2 !== 0);
-            else if (rec === "Rango Definido") applies = true;
-            else if (rec === "Único") applies = (m === rule.startMonth);
+            const rec = (rule.recurrence || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+            if (rec.includes("mensual") || rec.includes("cada mes") || rec.includes("monthly") || rec === "si") applies = true;
+            else if (rec.includes("bimestral par")) applies = (m % 2 === 0);
+            else if (rec.includes("bimestral non") || rec.includes("bimestral impar")) applies = (m % 2 !== 0);
+            else if (rec.includes("rango") || rec.includes("periodo")) applies = true;
+            else if (rec.includes("unico") || rec.includes("one time")) applies = (m === rule.startMonth);
 
             return applies ? acc + rule.amount : acc;
         }, 0);

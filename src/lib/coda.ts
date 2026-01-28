@@ -425,29 +425,40 @@ export async function getFinanceRules(docId?: string, apiToken?: string): Promis
         return rows.map((row: any) => {
             const val = row.values;
             const resolveV = (v: any) => {
-                if (!v) return null;
+                if (!v) return "";
                 if (typeof v === 'string') return v;
                 if (typeof v === 'object') return v.name || v.id || JSON.stringify(v);
                 return String(v);
             };
+
             const keys = Object.keys(val);
-            const conceptKey = keys.find(k => {
+            const findKey = (candidates: string[]) => keys.find(k => {
                 const n = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                return n === "concepto" || n === "nombre" || n === "name";
+                return candidates.includes(n);
             });
 
-            const conceptValue = resolveV(conceptKey ? val[conceptKey] : null);
+            const conceptKey = findKey(["concepto", "nombre", "name", "rule", "regla"]);
+            const amountKey = findKey(["monto base", "monto", "cantidad", "amount"]);
+            const recKey = findKey(["tipo recurrencia", "recurrencia", "recurrence", "frecuencia"]);
+            const dayKey = findKey(["dia de corte", "dia", "day", "fecha"]);
+            const statusKey = findKey(["estado", "status", "activo", "active"]);
+            const catKey = findKey(["categoria", "category"]);
+            const startKey = findKey(["mes inicio", "start month", "inicio"]);
+            const endKey = findKey(["mes fin", "end month", "fin"]);
+
+            const status = resolveV(statusKey ? val[statusKey] : "");
+            const isActive = ["activo", "activa", "active", "✅", "true", "si"].includes(status.toLowerCase().trim());
 
             return {
                 id: row.id,
-                name: row.name || conceptValue || "Sin Nombre",
-                amount: safeNumber(val["Monto Base"] || val["Monto"]),
-                recurrence: val["Tipo Recurrencia"] || "Unknown",
-                day: safeNumber(val["Día de Corte"] || val["Día"] || val["Day"]),
-                active: val["Estado"] === "Activo",
-                category: val["Categoría"] || "",
-                startMonth: safeNumber(val["Mes Inicio"]),
-                endMonth: safeNumber(val["Mes Fin"])
+                name: resolveV(conceptKey ? val[conceptKey] : null) || row.name || "Sin Nombre",
+                amount: safeNumber(amountKey ? val[amountKey] : 0),
+                recurrence: resolveV(recKey ? val[recKey] : "Mensual"),
+                day: safeNumber(dayKey ? val[dayKey] : 1),
+                active: isActive,
+                category: resolveV(catKey ? val[catKey] : ""),
+                startMonth: safeNumber(startKey ? val[startKey] : 0),
+                endMonth: safeNumber(endKey ? val[endKey] : 0)
             };
         });
     } catch (error) {
