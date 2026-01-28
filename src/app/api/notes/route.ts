@@ -41,7 +41,11 @@ export async function POST(request: NextRequest) {
             const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
             const userContent: any[] = [{ type: "text", text: `Analiza: "${rawTextToProcess}".` }];
             if (receiptUrl) {
-                const directImageUrl = receiptUrl.replace("www.dropbox.com", "dl.dropboxusercontent.com").replace("?dl=0", "");
+                // More robust Dropbox direct image transformation
+                const directImageUrl = receiptUrl.includes('?')
+                    ? receiptUrl.replace(/\?dl=\d+/, '?raw=1')
+                    : receiptUrl + '?raw=1';
+
                 userContent.push({ type: "image_url", image_url: { url: directImageUrl } });
             }
 
@@ -52,13 +56,14 @@ export async function POST(request: NextRequest) {
                 ],
                 model: "gpt-4o",
                 response_format: { type: "json_object" }
-            }, { timeout: 15000 });
+            }, { timeout: 20000 }); // Increase to 20s
 
             const aiRes = JSON.parse(completion.choices[0].message.content || "{}");
             aiDetails.summary = aiRes.summary_content || aiDetails.summary;
             if (aiRes.finance_details?.amount) aiDetails.amount = aiRes.finance_details.amount;
-        } catch (e) {
+        } catch (e: any) {
             console.error("AI Error (Falling back to raw data):", e);
+            aiDetails.summary = `⚠️ Error IA: ${e.message || 'Fallo de conexión'}. | Dictado original: ${rawTextToProcess}`;
         }
 
         // --- STEP 3: SINGLE CODA RECORD ---
