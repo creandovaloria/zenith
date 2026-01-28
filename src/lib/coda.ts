@@ -472,7 +472,7 @@ export async function updateFinanceStatus(rowId: string, status: string = "✅ P
                     { column: "Estado", value: status },
                     { column: "Comprobante", value: extra?.receiptUrl || "" },
                     { column: "Resumen de la IA", value: extra?.notes || "" },
-                    { column: "Concepto Corto", value: extra?.title || "" }
+                    { column: "Concepto", value: extra?.title || "" }
                 ].filter(c => c.value !== "" || c.column === "Estado")
             }
         };
@@ -653,7 +653,6 @@ export async function createBulkProjections(rows: any[], docId?: string, apiToke
         const payload = {
             rows: rows.map(r => ({
                 cells: [
-                    { column: "ID Gasto", value: r.conceptId },
                     { column: "Concepto", value: r.name },
                     { column: "Fecha de Pago", value: r.date },
                     { column: "Monto", value: r.amount },
