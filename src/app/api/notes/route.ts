@@ -49,11 +49,12 @@ export async function POST(request: Request) {
                 if (aiResponse.summary_content) summary = aiResponse.summary_content;
 
                 // --- SUPER FORCE FINANCE DETECTION ---
-                const normalizedText = rawTextToProcess.toLowerCase();
+                const normalizedText = rawTextToProcess.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                 const hasAmount = /\d+/.test(rawTextToProcess);
-                const hasKeywords = normalizedText.includes("$") || normalizedText.includes("pesos") || normalizedText.includes("gaste") || normalizedText.includes("pague") || normalizedText.includes("compre") || normalizedText.includes("ticket") || normalizedText.includes("pago") || normalizedText.includes("compra") || normalizedText.includes("registrar");
+                const financialKeywords = ["$", "pesos", "gaste", "pague", "compre", "ticket", "pago", "compra", "registrar", "renta", "colegiatura", "pension"];
+                const hasKeywords = financialKeywords.some(k => normalizedText.includes(k));
 
-                if (aiResponse.finance_details?.is_finance || hasKeywords || (type === "Expense" && hasAmount)) {
+                if (aiResponse.finance_details?.is_finance || hasKeywords || hasAmount) {
                     // Cleaner number extraction (handles 12,000 -> 12000)
                     const rawAmount = rawTextToProcess.replace(/,/g, '').match(/\d+(\.\d+)?/)?.[0] || "0";
 
@@ -61,8 +62,8 @@ export async function POST(request: Request) {
                         is_finance: true,
                         amount: parseFloat(rawAmount),
                         concept: title || "Gasto Detectado",
-                        category: "Imprevistos",
-                        action: "new_expense"
+                        category: "Logística de Vida", // Default to Life Logistics if it's renta/pago
+                        action: normalizedText.includes("renta") || normalizedText.includes("pago") ? "mark_paid" : "new_expense"
                     };
                 }
             }
