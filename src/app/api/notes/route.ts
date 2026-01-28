@@ -46,9 +46,12 @@ export async function POST(request: Request) {
                 const hasKeywords = normalizedText.includes("$") || normalizedText.includes("pesos") || normalizedText.includes("gaste") || normalizedText.includes("pague") || normalizedText.includes("compre") || normalizedText.includes("ticket") || normalizedText.includes("pago") || normalizedText.includes("compra") || normalizedText.includes("registrar");
 
                 if (aiResponse.finance_details?.is_finance || hasKeywords || (type === "Expense" && hasAmount)) {
+                    // Cleaner number extraction (handles 12,000 -> 12000)
+                    const rawAmount = text.replace(/,/g, '').match(/\d+(\.\d+)?/)?.[0] || "0";
+
                     aiFinanceDetails = aiResponse.finance_details || {
                         is_finance: true,
-                        amount: parseFloat(text.match(/\d+(\.\d+)?/)?.[0] || "0"),
+                        amount: parseFloat(rawAmount),
                         concept: title || "Gasto Detectado",
                         category: "Imprevistos",
                         action: "new_expense"
