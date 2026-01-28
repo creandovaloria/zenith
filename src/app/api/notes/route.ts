@@ -36,11 +36,24 @@ export async function POST(request: Request) {
             const aiContent = completion.choices[0].message.content;
             if (aiContent) {
                 const aiResponse = JSON.parse(aiContent);
+                console.log("🧠 Zenith AI Thought:", JSON.stringify(aiResponse, null, 2));
+
                 if (aiResponse.suggested_title) title = aiResponse.suggested_title;
                 if (aiResponse.final_type) type = aiResponse.final_type;
                 if (aiResponse.summary_content) summary = aiResponse.summary_content;
-                if (aiResponse.finance_details?.is_finance) {
-                    aiFinanceDetails = aiResponse.finance_details;
+
+                // Force finance if keywords are present even if AI is unsure
+                const lowerText = text.toLowerCase();
+                const hasFinanceKeywords = lowerText.includes("$") || lowerText.includes("pesos") || lowerText.includes("gaste") || lowerText.includes("pague");
+
+                if (aiResponse.finance_details?.is_finance || hasFinanceKeywords) {
+                    aiFinanceDetails = aiResponse.finance_details || {
+                        is_finance: true,
+                        amount: parseFloat(text.match(/\d+/)?.[0] || "0"),
+                        concept: title || "Gasto detectado",
+                        category: "Imprevistos",
+                        action: "new_expense"
+                    };
                 }
             }
         } catch (aiError) {
@@ -52,11 +65,9 @@ export async function POST(request: Request) {
             const { action, amount, concept, category: financeCategory } = aiFinanceDetails;
 
             if (action === "mark_paid") {
-                // Smart Matcher for Projections
                 const projections = await getFinanceProjections();
                 const pending = projections.filter(p => p.status !== "✅ Pagado" && p.status !== "Pagado");
 
-                // Simple search for concept in name
                 const target = pending.find(p =>
                     p.concept.toLowerCase().includes(concept.toLowerCase()) ||
                     concept.toLowerCase().includes(p.concept.toLowerCase())
@@ -64,35 +75,38 @@ export async function POST(request: Request) {
 
                 if (target) {
                     console.log(`🎯 Smart Match Found: ${target.concept}. Updating in Coda...`);
-                    await updateFinanceStatus(target.id, "✅ Pagado", { receiptUrl, notes: summary, title });
-                    return NextResponse.json({
-                        success: true,
-                        message: `Marcado como pagado: ${target.concept}`,
-                        action: "mark_paid"
-                    });
-                } else {
-                    console.log("⚠️ No pending projection match found. Falling back to Ledger.");
-                    // If no projection found, treat as new variable expense
+                    const ok = await updateFinanceStatus(target.id, "✅ Pagado", { receiptUrl, notes: summary, title });
+                    if (ok) {
+                        return NextResponse.json({
+                            success: true,
+                            message: `✅ Marcado como pagado: ${target.concept}`,
+                            action: "mark_paid"
+                        });
+                    }
                 }
             }
 
-            // Create Ledger Entry for any expense or failed mark_paid
-            if (action === "new_expense" || action === "mark_paid") {
-                console.log(`🧾 Creating Ledger Entry: ${concept} ($${amount})`);
-                await createLedgerEntry({
-                    concept: concept || title,
-                    amount: amount,
-                    category: financeCategory,
-                    paymentMethod: "Voz / Zenith AI",
-                    receiptUrl: receiptUrl,
-                    notes: summary
-                });
+            // Create Ledger Entry
+            console.log(`🧾 Creating Ledger Entry: ${concept} ($${amount})`);
+            const ok = await createLedgerEntry({
+                concept: concept || title,
+                amount: amount,
+                category: financeCategory || "Imprevistos",
+                paymentMethod: "Voz / Zenith AI",
+                receiptUrl: receiptUrl,
+                notes: summary
+            });
 
+            if (ok) {
                 return NextResponse.json({
                     success: true,
-                    message: `Gasto registrado en Ledger: ${concept}`,
+                    message: `🧾 Gasto registrado en Ledger: ${concept} ($${amount})`,
                     action: "new_expense"
                 });
+            } else {
+                return NextResponse.json({
+                    error: "Coda Reject: Verifica que el Doc ID y el Token sean correctos y que las columnas existan."
+                }, { status: 500 });
             }
         }
 
