@@ -3,10 +3,11 @@ import { getFinanceProjections } from "@/lib/coda";
 
 /**
  * GET /api/finance/pending
- * Obtiene lista de pagos fijos pendientes para el menú del atajo
+ * Obtiene lista de pagos fijos pendientes para el menú del atajo iOS
  * 
  * Response:
- * - items: Array de { id, label, amount, dueDate, isOverdue }
+ * - menuItems: Array de strings para "Elegir de lista" en iOS (formato: "Concepto - $Monto")
+ * - items: Objeto mapeando cada menuItem a sus datos completos (para lookup por label)
  */
 export async function GET() {
     try {
@@ -15,16 +16,17 @@ export async function GET() {
         today.setHours(0, 0, 0, 0);
 
         // Filtrar solo pendientes y vencidos (no pagados)
-        const pending = projections
+        const pendingList = projections
             .filter(p => !p.status.includes("✅"))
             .map(p => {
                 const dueDate = new Date(p.date);
                 dueDate.setHours(0, 0, 0, 0);
                 const isOverdue = dueDate < today;
+                const statusEmoji = isOverdue ? "❌" : "⏳";
 
                 return {
                     id: p.id,
-                    label: `${p.concept} - $${p.amount.toLocaleString()}`,
+                    label: `${statusEmoji} ${p.concept} - $${p.amount.toLocaleString()}`,
                     concept: p.concept,
                     amount: p.amount,
                     dueDate: p.date,
@@ -34,10 +36,20 @@ export async function GET() {
             })
             .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 
+        // Crear array de strings para el menú de iOS
+        const menuItems = pendingList.map(p => p.label);
+
+        // Crear objeto de lookup por label
+        const items: Record<string, typeof pendingList[0]> = {};
+        pendingList.forEach(p => {
+            items[p.label] = p;
+        });
+
         return NextResponse.json({
             success: true,
-            count: pending.length,
-            items: pending
+            count: pendingList.length,
+            menuItems,  // Array de strings para "Elegir de lista"
+            items       // Objeto para lookup: items["❌ Préstamo 50K - $5,000"].id
         });
 
     } catch (error) {
